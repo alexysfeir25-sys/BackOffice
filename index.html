@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renewals Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#1B2233; --muted:#667085; --line:#DDE2EA;
+  --due:#C2185B; --due-soft:#FCE4EE; --soon:#B7791F; --soon-soft:#FDF3DC;
+  --ok:#0F7F80; --ok-soft:#DDF3F2; --wa:#1E8E4E;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151D; --surface:#1B2030; --ink:#E9ECF3; --muted:#98A1B3; --line:#2C3346;
+    --due:#FF5C93; --due-soft:#3A1826; --soon:#F0B44C; --soon-soft:#352A14;
+    --ok:#3CC7C4; --ok-soft:#123331; --wa:#3CCB7A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151D; --surface:#1B2030; --ink:#E9ECF3; --muted:#98A1B3; --line:#2C3346;
+  --due:#FF5C93; --due-soft:#3A1826; --soon:#F0B44C; --soon-soft:#352A14;
+  --ok:#3CC7C4; --ok-soft:#123331; --wa:#3CCB7A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 64px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:28px}
+h1{font:800 clamp(2rem,6vw,3.2rem)/1 var(--display);letter-spacing:-.02em;margin:0}
+.today{color:var(--muted);margin-top:6px}
+.summary{color:var(--muted);margin-top:4px}
+.summary b{color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.wa{color:var(--wa);border-color:color-mix(in srgb,var(--wa) 40%,var(--line))}
+.btn.small{padding:6px 10px;font-size:.88rem;border-radius:8px}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--due)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.tab:focus-visible{outline:3px solid color-mix(in srgb,var(--ok) 60%,transparent);outline-offset:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.banner{background:var(--soon-soft);color:var(--ink);border-left:4px solid var(--soon);padding:10px 14px;border-radius:8px;margin-bottom:20px;display:none}
+
+/* The alert board — the one loud element */
+.board{background:var(--surface);border:2px solid var(--due);border-radius:18px;padding:18px 18px 8px;margin-bottom:32px}
+.board.calm{border-color:var(--line)}
+.board h2{font:700 1.35rem/1.2 var(--display);margin:0 0 4px}
+.board p.sub{margin:0 0 12px;color:var(--muted)}
+.due-row{display:grid;grid-template-columns:84px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.count{font:800 2.6rem/1 var(--display);letter-spacing:-.03em;text-align:center}
+.count small{display:block;font:700 .75rem/1.2 var(--body);letter-spacing:0;color:var(--muted);margin-top:4px}
+.count.over{color:var(--due)} .count.zero{color:var(--due)} .count.near{color:var(--soon)}
+.who b{font-size:1.05rem}
+.who .meta{color:var(--muted);font-size:.92rem}
+.tag{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.tag.acc{background:var(--soon-soft);color:var(--soon)}
+.tag.done{background:var(--ok-soft);color:var(--ok)}
+.empty{padding:16px 0 12px;color:var(--muted)}
+
+/* Tabs + list */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tab{background:none;border:none;padding:10px 14px;font:700 1.05rem var(--display);color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.toolbar input,.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.toolbar input{flex:1 1 200px}
+.spacer{flex:1}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:1.4fr 1.1fr 1fr .9fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.row:first-child{border-top:none}
+.row.head{font-size:.85rem;color:var(--muted);font-weight:700;background:color-mix(in srgb,var(--bg) 60%,var(--surface))}
+.row .muted{color:var(--muted);font-size:.9rem}
+.pill{display:inline-block;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.soon{background:var(--soon-soft);color:var(--soon)}
+.pill.due{background:var(--due-soft);color:var(--due)}
+.pill.stop{background:var(--line);color:var(--muted)}
+.acc-row{grid-template-columns:1.2fr 1.4fr .8fr 1fr auto}
+.slots{font-weight:700}
+.slots.full{color:var(--due)}
+
+/* Dialog */
+dialog{border:none;border-radius:16px;padding:0;background:var(--surface);color:var(--ink);width:min(560px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(10,14,24,.55)}
+.dlg{padding:22px;overflow-y:auto;max-height:90vh}
+.dlg h3{font:700 1.4rem var(--display);margin:0 0 16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:.88rem;font-weight:700;color:var(--muted)}
+label input,label select,label textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-weight:400;color:var(--ink)}
+.hint{font-size:.82rem;color:var(--muted);font-weight:400}
+.dlg .actions{justify-content:flex-end;margin-top:18px}
+
+@media (max-width:760px){
+  .row.head{display:none}
+  .row,.acc-row{grid-template-columns:1fr 1fr;gap:6px 12px}
+  .row .cell-actions{grid-column:1/-1}
+  .due-row{grid-template-columns:64px 1fr}
+  .due-row .actions{grid-column:1/-1}
+  .count{font-size:2rem}
+  .grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){
+  .board:not(.calm){animation:pulse 1.2s ease-out 1}
+  @keyframes pulse{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--due) 45%,transparent)}to{box-shadow:0 0 0 14px transparent}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Renewals</h1>
+      <div class="today" id="today"></div>
+      <div class="summary" id="summary"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnSettings" type="button">Message templates</button>
+      <button class="btn" id="btnAddAcc" type="button">Add account</button>
+      <button class="btn primary" id="btnAddCust" type="button">+ Add customer</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner">Saving isn't working in this browser (private mode blocks it). Open the file in a normal window.</div>
+
+  <section class="board" id="board" aria-live="polite">
+    <h2 id="boardTitle">Needs a reminder</h2>
+    <p class="sub">Customers and stock accounts ending within 3 days, plus anything overdue.</p>
+    <div id="dueList"></div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="customers">Customers</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="accounts">Stock accounts</button>
+  </div>
+
+  <div id="paneCustomers">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Search name or number" aria-label="Search customers">
+      <select id="fService" aria-label="Filter by service"><option value="">All services</option></select>
+      <select id="fStatus" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="active">Active</option>
+        <option value="soon">Ending in 3 days</option>
+        <option value="expired">Expired</option>
+        <option value="stopped">Not renewing</option>
+        <option value="unpaid">Payment pending</option>
+      </select>
+      <span class="spacer"></span>
+      <button class="btn small" id="btnExport" type="button">Export CSV</button>
+      <button class="btn small" id="btnBackup" type="button">Download backup</button>
+      <button class="btn small" id="btnRestore" type="button">Restore backup</button>
+      <input type="file" id="fileRestore" accept=".json,application/json" hidden>
+    </div>
+    <div class="list" id="custList"></div>
+  </div>
+
+  <div id="paneAccounts" hidden>
+    <p class="hint" style="margin:0 0 12px">Keep passwords in your phone's password manager or notes, not here.</p>
+    <div class="list" id="accList"></div>
+  </div>
+</div>
+
+<dialog id="dlgCust"><form class="dlg" method="dialog" id="formCust">
+  <h3 id="custTitle">Add customer</h3>
+  <div class="grid">
+    <label>Name<input name="name" required></label>
+    <label>WhatsApp number<input name="phone" required inputmode="tel" placeholder="03 123 456"></label>
+    <label>Service<input name="service" list="serviceList" required placeholder="Netflix"></label>
+    <label>Stock account<select name="accountId"><option value="">None</option></select></label>
+    <label>Profile / slot<input name="profile" placeholder="Profile 3"></label>
+    <label>Profile passcode (4 digits)
+      <span style="display:flex;gap:6px"><input name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234" style="flex:1;min-width:0"><button class="btn small" type="button" id="btnPin">Random</button></span>
+      <span class="hint">Must be different for each user on the same account.</span></label>
+    <label>Start date<input name="start" type="date" required></label>
+    <label>Duration<select name="months">
+      <option value="1">1 month</option><option value="3">3 months</option>
+      <option value="6">6 months</option><option value="12">12 months</option>
+    </select></label>
+    <label class="full">Ends on<input name="expiry" type="date" required><span class="hint">Filled in from start date and duration. You can change it.</span></label>
+    <label>Price ($)<input name="price" type="number" min="0" step="0.5"></label>
+    <label>Payment status<select name="payStatus">
+      <option>Paid</option><option>Pending</option><option>Partial</option>
+    </select></label>
+    <label>Amount paid ($)<input name="amountPaid" type="number" min="0" step="0.5"></label>
+    <label>Date paid<input name="datePaid" type="date"></label>
+    <label>Paid via<select name="payMethod">
+      <option>Whish</option><option>OMT</option><option>Cash</option><option>Other</option>
+    </select></label>
+    <label class="full">Notes<textarea name="notes" rows="2"></textarea></label>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save customer</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgRenew"><form class="dlg" method="dialog" id="formRenew">
+  <h3 id="renewTitle">Renew</h3>
+  <div class="grid">
+    <label>Renew for<select name="months">
+      <option value="1">1 month</option><option value="3">3 months</option>
+      <option value="6">6 months</option><option value="12">12 months</option>
+    </select></label>
+    <label>New end date<input name="expiry" type="date" required></label>
+    <label>Payment status<select name="payStatus">
+      <option>Paid</option><option>Pending</option><option>Partial</option>
+    </select></label>
+    <label>Amount paid ($)<input name="amountPaid" type="number" min="0" step="0.5"></label>
+    <label>Date paid<input name="datePaid" type="date"></label>
+    <label>Paid via<select name="payMethod">
+      <option>Whish</option><option>OMT</option><option>Cash</option><option>Other</option>
+    </select></label>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save renewal</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgAcc"><form class="dlg" method="dialog" id="formAcc">
+  <h3 id="accTitle">Add stock account</h3>
+  <div class="grid">
+    <label>Service<input name="service" list="serviceList" required placeholder="Shahid VIP"></label>
+    <label>Login email or label<input name="login" required placeholder="netflix1@..."></label>
+    <label>Number of slots<input name="slots" type="number" min="1" value="5" required></label>
+    <label>Account renews on<input name="expiry" type="date" required></label>
+    <label>Cost ($)<input name="cost" type="number" min="0" step="0.5"></label>
+    <label>Notes<input name="notes"></label>
+    <label class="full">Temporary code link<input name="tempLink" type="url" placeholder="https://..."><span class="hint">Sent to customers when Netflix asks for a temporary code.</span></label>
+  </div>
+  <p class="hint">Don't enter the account password here.</p>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save account</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgSet"><form class="dlg" method="dialog" id="formSet">
+  <h3>Reminder message</h3>
+  <label>WhatsApp message<textarea name="template" rows="5"></textarea>
+  <span class="hint">Use {name}, {service}, {date} and {price}. They're filled in for each customer.</span></label>
+  <label style="margin-top:14px">Temporary code steps<textarea name="codeTemplate" rows="7"></textarea>
+  <span class="hint">Use {name} and {link}. {link} is the temporary code link of the customer's stock account.</span></label>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save message</button>
+  </div>
+</form></dialog>
+
+<datalist id="serviceList">
+  <option value="Netflix"><option value="Shahid VIP"><option value="Anghami Plus"><option value="OSN+">
+  <option value="StarzPlay"><option value="YouTube Premium"><option value="Spotify"><option value="TOD">
+</datalist>
+
+<script>
+(function(){
+  const DEFAULT_TEMPLATE = "Hi {name}, your {service} subscription ends on {date}. To keep it running, send {price} via Whish or OMT and reply here with the screenshot. Thank you!";
+  
+  const DEFAULT_CODE = "Hi {name}, if Netflix asks for a temporary code, follow these steps:\n\nStep 1: Click on \"Update Netflix Household\"\nStep 2: Click \"Send email\"\nStep 3: Open this link: {link}\nStep 4: The code will appear after 1 minute. Enter it on Netflix.";
+  let customers = [], accounts = [], settings = { template: DEFAULT_TEMPLATE, codeTemplate: DEFAULT_CODE };
+  let renewing = null;
+  let editingCust = null, editingAcc = null;
+  const $ = s => document.querySelector(s);
+
+  // ---------- dates ----------
+  function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function toUTC(s){ const [y,m,d]=s.split("-").map(Number); return Date.UTC(y,m-1,d); }
+  function daysLeft(exp){ if(!exp) return 9999; return Math.round((toUTC(exp)-toUTC(todayStr()))/864e5); }
+  function addMonths(s,n){
+    const [y,m,d]=s.split("-").map(Number);
+    const last=new Date(Date.UTC(y,m-1+n+1,0)).getUTCDate();
+    const t=new Date(Date.UTC(y,m-1+n,Math.min(d,last)));
+    return t.toISOString().slice(0,10);
+  }
+  function addDays(s,n){ return new Date(toUTC(s)+n*864e5).toISOString().slice(0,10); }
+  function fmt(s){ if(!s) return "—"; return new Date(toUTC(s)).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}); }
+  function esc(v){ return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function money(p){ return (p===""||p==null||isNaN(p)) ? "" : "$"+Number(p); }
+  function newId(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  function status(c){
+    if(c.stopped) return "stopped";
+    const d=daysLeft(c.expiry);
+    if(d<0) return "expired";
+    if(d<=3) return "soon";
+    return "active";
+  }
+
+  // ---------- links ----------
+  function waNumber(raw){
+    let n=String(raw||"").replace(/\D/g,"");
+    if(n.startsWith("00")) n=n.slice(2);
+    if(n.startsWith("961")) return n;
+    if(n.startsWith("0")) n=n.slice(1);
+    if(n.length<=8) return "961"+n;
+    return n;
+  }
+  function waLink(c){
+    const msg=(settings.template||DEFAULT_TEMPLATE)
+      .replaceAll("{name}",c.name||"").replaceAll("{service}",c.service||"")
+      .replaceAll("{date}",fmt(c.expiry)).replaceAll("{price}",money(c.price)||"the renewal amount");
+    return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
+  }
+  function accOf(c){ return accounts.find(a=>a.id===c.accountId); }
+  function codeLink(c){
+    const a=accOf(c);
+    const msg=(settings.codeTemplate||DEFAULT_CODE).replaceAll("{name}",c.name||"").replaceAll("{link}",(a&&a.tempLink)||"");
+    return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
+  }
+  function unpaid(c){ return c.payStatus==="Pending"||c.payStatus==="Partial"; }
+  function payHtml(c){
+    if(!c.payStatus) return "";
+    if(c.payStatus==="Paid") return '<span class="pill ok">Paid</span><div class="muted">'+esc(money(c.amountPaid))+(c.datePaid?' on '+fmt(c.datePaid):'')+(c.payMethod?' via '+esc(c.payMethod):'')+'</div>';
+    if(c.payStatus==="Partial") return '<span class="pill soon">Partial</span><div class="muted">'+esc(money(c.amountPaid)||"$0")+' of '+esc(money(c.price)||"?")+(c.datePaid?' on '+fmt(c.datePaid):'')+'</div>';
+    return '<span class="pill due">Payment pending</span><div class="muted">'+esc(money(c.price))+' due</div>';
+  }
+  function calLink(title,expiry){
+    let day=addDays(expiry,-3);
+    if(toUTC(day)<toUTC(todayStr())) day=todayStr();
+    const d=day.replace(/-/g,"");
+    const p=new URLSearchParams({action:"TEMPLATE",text:title,dates:d+"T100000/"+d+"T101500",ctz:"Asia/Beirut",details:"Ends on "+fmt(expiry)});
+    return "https://calendar.google.com/calendar/render?"+p.toString();
+  }
+
+  // ---------- storage ----------
+  const KEY="renewals-tracker-v1";
+  function persist(){
+    try{ localStorage.setItem(KEY,JSON.stringify({customers,accounts,settings})); }
+    catch(e){ $("#banner").style.display="block"; }
+  }
+  function load(){
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(raw){ const d=JSON.parse(raw); customers=d.customers||[]; accounts=d.accounts||[]; settings=Object.assign({template:DEFAULT_TEMPLATE,codeTemplate:DEFAULT_CODE},d.settings||{}); }
+    }catch(e){ $("#banner").style.display="block"; }
+  }
+  async function put(col,id,data){
+    const arr=col==="customers"?customers:accounts;
+    const i=arr.findIndex(x=>x.id===id);
+    const row=Object.assign({id},data);
+    if(i>=0) arr[i]=row; else arr.push(row);
+    persist(); render();
+  }
+  async function del(col,id){
+    if(col==="customers") customers=customers.filter(x=>x.id!==id); else accounts=accounts.filter(x=>x.id!==id);
+    persist(); render();
+  }
+  function strip(o){ const c=Object.assign({},o); delete c.id; return c; }
+
+  // ---------- render ----------
+  function render(){
+    $("#today").textContent="Today is "+fmt(todayStr());
+    const active=customers.filter(c=>["active","soon"].includes(status(c))).length;
+    const soon=customers.filter(c=>status(c)==="soon").length;
+    const expired=customers.filter(c=>status(c)==="expired").length;
+    const owed=customers.filter(c=>unpaid(c)&&!c.stopped).length;
+    $("#summary").innerHTML="<b>"+active+"</b> active, <b>"+soon+"</b> ending within 3 days, <b>"+expired+"</b> expired, <b>"+owed+"</b> payment pending";
+    renderDue(); renderServices(); renderCustomers(); renderAccounts();
+  }
+
+  function countHtml(d){
+    const cls=d<0?"over":d===0?"zero":"near";
+    const big=d<0?Math.abs(d):d;
+    const label=d<0?(big===1?"day late":"days late"):d===0?"ends today":(d===1?"day left":"days left");
+    return '<div class="count '+cls+'">'+big+'<small>'+label+'</small></div>';
+  }
+
+  function renderDue(){
+    const items=[];
+    customers.forEach(c=>{ const s=status(c); if(s==="soon"||s==="expired") items.push({kind:"c",d:daysLeft(c.expiry),x:c}); });
+    accounts.forEach(a=>{ const d=daysLeft(a.expiry); if(d<=3) items.push({kind:"a",d,x:a}); });
+    items.sort((a,b)=>a.d-b.d);
+    const board=$("#board");
+    board.classList.toggle("calm",items.length===0);
+    $("#boardTitle").textContent=items.length?("Needs a reminder ("+items.length+")"):"Nothing to renew in the next 3 days";
+    if(!items.length){ $("#dueList").innerHTML='<div class="empty">You\'re clear. New alerts appear here automatically 3 days before any end date.</div>'; return; }
+    $("#dueList").innerHTML=items.map(it=>{
+      const x=it.x;
+      if(it.kind==="c"){
+        const reminded=x.remindedFor===x.expiry;
+        return '<div class="due-row">'+countHtml(it.d)+
+          '<div class="who"><b>'+esc(x.name)+'</b>'+(reminded?'<span class="tag done">Reminded</span>':'')+(unpaid(x)?'<span class="tag acc">Payment pending</span>':'')+
+          '<div class="meta">'+esc(x.service)+(x.profile?', '+esc(x.profile):'')+'. Ends '+fmt(x.expiry)+(x.price?'. '+money(x.price):'')+'</div></div>'+
+          '<div class="actions">'+
+            '<a class="btn small wa" href="'+waLink(x)+'" target="_blank" rel="noopener" data-remind="'+x.id+'">'+(reminded?'Message again':'Send WhatsApp reminder')+'</a>'+
+            '<button class="btn small" data-renew="'+x.id+'" type="button">Renew</button>'+
+            '<button class="btn small ghost" data-stop="'+x.id+'" type="button">Not renewing</button>'+
+          '</div></div>';
+      }
+      return '<div class="due-row">'+countHtml(it.d)+
+        '<div class="who"><b>'+esc(x.service)+'</b><span class="tag acc">Stock account</span>'+
+        '<div class="meta">'+esc(x.login)+'. Pay the platform by '+fmt(x.expiry)+'</div></div>'+
+        '<div class="actions"><button class="btn small" data-accrenew="'+x.id+'" type="button">Mark paid (+1 month)</button></div></div>';
+    }).join("");
+  }
+
+  function renderServices(){
+    const sel=$("#fService"), cur=sel.value;
+    const set=[...new Set(customers.map(c=>c.service).filter(Boolean))].sort();
+    sel.innerHTML='<option value="">All services</option>'+set.map(s=>'<option'+(s===cur?' selected':'')+'>'+esc(s)+'</option>').join("");
+  }
+
+  function renderCustomers(){
+    const q=$("#q").value.trim().toLowerCase(), fs=$("#fService").value, fst=$("#fStatus").value;
+    const rows=customers.filter(c=>{
+      if(q && !((c.name||"").toLowerCase().includes(q) || (c.phone||"").replace(/\D/g,"").includes(q.replace(/\D/g,"")||"~"))) return false;
+      if(fs && c.service!==fs) return false;
+      if(fst==="unpaid"){ if(!unpaid(c)) return false; }
+      else if(fst && status(c)!==fst) return false;
+      return true;
+    }).sort((a,b)=>(a.expiry||"").localeCompare(b.expiry||""));
+    if(!customers.length){ $("#custList").innerHTML='<div class="empty" style="padding:20px">No customers yet. Add your first one to start tracking end dates.</div>'; return; }
+    if(!rows.length){ $("#custList").innerHTML='<div class="empty" style="padding:20px">No customers match these filters.</div>'; return; }
+    const pill={active:['ok','Active'],soon:['soon','Ending soon'],expired:['due','Expired'],stopped:['stop','Not renewing']};
+    const accName=id=>{ const a=accounts.find(a=>a.id===id); return a?a.login:""; };
+    $("#custList").innerHTML='<div class="row head"><div>Customer</div><div>Service</div><div>Ends</div><div>Status and payment</div><div></div></div>'+
+      rows.map(c=>{ const s=status(c), d=daysLeft(c.expiry);
+        return '<div class="row">'+
+          '<div><b>'+esc(c.name)+'</b><div class="muted">'+esc(c.phone)+'</div></div>'+
+          '<div>'+esc(c.service)+'<div class="muted">'+esc([c.profile,c.pin?"PIN "+c.pin:"",accName(c.accountId)].filter(Boolean).join(", "))+'</div></div>'+
+          '<div>'+fmt(c.expiry)+'<div class="muted">'+(s==="stopped"?"":d<0?Math.abs(d)+" days ago":d===0?"today":"in "+d+" days")+'</div></div>'+
+          '<div><span class="pill '+pill[s][0]+'">'+pill[s][1]+'</span> '+payHtml(c)+'</div>'+
+          '<div class="actions cell-actions">'+
+            '<a class="btn small wa" href="'+waLink(c)+'" target="_blank" rel="noopener" data-remind="'+c.id+'" title="Send WhatsApp reminder">WhatsApp</a>'+
+            ((accOf(c)&&accOf(c).tempLink)?'<a class="btn small wa" href="'+codeLink(c)+'" target="_blank" rel="noopener" title="Send the temporary code steps">Code steps</a>':'')+
+            '<a class="btn small" href="'+calLink("Renew "+(c.name||"")+" ("+(c.service||"")+")",c.expiry)+'" target="_blank" rel="noopener" title="Add a phone calendar alert 3 days before the end date">Calendar alert</a>'+
+            '<button class="btn small" data-renew="'+c.id+'" type="button">Renew</button>'+
+            '<button class="btn small ghost" data-edit="'+c.id+'" type="button">Edit</button>'+
+            '<button class="btn small ghost danger" data-del="'+c.id+'" type="button">Delete</button>'+
+          '</div></div>'; }).join("");
+  }
+
+  function renderAccounts(){
+    if(!accounts.length){ $("#accList").innerHTML='<div class="empty" style="padding:20px">No stock accounts yet. Add one to track its slots and when you need to pay the platform.</div>'; return; }
+    const rows=[...accounts].sort((a,b)=>(a.expiry||"").localeCompare(b.expiry||""));
+    $("#accList").innerHTML='<div class="row head acc-row"><div>Service</div><div>Login</div><div>Slots used</div><div>Renews</div><div></div></div>'+
+      rows.map(a=>{
+        const used=customers.filter(c=>c.accountId===a.id && ["active","soon"].includes(status(c))).length;
+        const total=Number(a.slots)||0, d=daysLeft(a.expiry);
+        return '<div class="row acc-row">'+
+          '<div><b>'+esc(a.service)+'</b><div class="muted">'+esc(money(a.cost))+'</div></div>'+
+          '<div>'+esc(a.login)+'<div class="muted">'+esc([a.tempLink?"Code link saved":"No code link",a.notes].filter(Boolean).join(", "))+'</div></div>'+
+          '<div class="slots'+(used>=total?' full':'')+'">'+used+' / '+total+'<div class="muted">'+(total-used>0?(total-used)+" free":"Full")+'</div></div>'+
+          '<div>'+fmt(a.expiry)+'<div class="muted">'+(d<0?Math.abs(d)+" days ago":d===0?"today":"in "+d+" days")+'</div></div>'+
+          '<div class="actions cell-actions">'+
+            '<a class="btn small" href="'+calLink("Pay "+(a.service||"")+" account ("+(a.login||"")+")",a.expiry)+'" target="_blank" rel="noopener">Calendar alert</a>'+
+            '<button class="btn small" data-accrenew="'+a.id+'" type="button">Mark paid</button>'+
+            '<button class="btn small ghost" data-accedit="'+a.id+'" type="button">Edit</button>'+
+            '<button class="btn small ghost danger" data-accdel="'+a.id+'" type="button">Delete</button>'+
+          '</div></div>';
+      }).join("");
+  }
+
+  // ---------- customer form ----------
+  const fc=$("#formCust");
+  function fillAccountSelect(service,selected){
+    const sel=fc.accountId;
+    const list=accounts.filter(a=>!service || (a.service||"").toLowerCase()===service.toLowerCase());
+    sel.innerHTML='<option value="">None</option>'+list.map(a=>'<option value="'+a.id+'"'+(a.id===selected?' selected':'')+'>'+esc(a.service+": "+a.login)+'</option>').join("");
+  }
+  function openCust(c){
+    editingCust=c?c.id:null;
+    $("#custTitle").textContent=c?"Edit customer":"Add customer";
+    fc.reset();
+    const v=c||{start:todayStr(),months:"1",payMethod:"Whish",payStatus:"Paid",datePaid:todayStr()};
+    fc.pin.setCustomValidity("");
+    ["name","phone","service","profile","pin","price","start","notes","payMethod","payStatus","amountPaid","datePaid"].forEach(k=>{ if(v[k]!=null) fc[k].value=v[k]; });
+    fc.months.value=String(v.months||1);
+    fc.expiry.value=v.expiry||addMonths(fc.start.value,Number(fc.months.value));
+    fillAccountSelect(fc.service.value,v.accountId);
+    $("#dlgCust").showModal();
+  }
+  function usedPins(accountId){
+    return customers.filter(c=>c.id!==editingCust && accountId && c.accountId===accountId && !c.stopped && c.pin).map(c=>c.pin);
+  }
+  function pinError(){
+    const pin=fc.pin.value.trim(), acc=fc.accountId.value;
+    if(acc && !pin) return "Enter this user's 4-digit passcode.";
+    if(pin && !/^[0-9]{4}$/.test(pin)) return "The passcode must be exactly 4 digits.";
+    if(pin && usedPins(acc).includes(pin)){
+      const other=customers.find(c=>c.id!==editingCust && c.accountId===acc && c.pin===pin && !c.stopped);
+      return "Passcode "+pin+" is already used by "+(other?other.name:"another user")+" on this account.";
+    }
+    return "";
+  }
+  $("#btnPin").addEventListener("click",()=>{
+    const used=usedPins(fc.accountId.value); let p, tries=0;
+    do{ p=String(Math.floor(Math.random()*10000)).padStart(4,"0"); tries++; }while(used.includes(p)&&tries<500);
+    fc.pin.value=p; fc.pin.setCustomValidity("");
+  });
+  fc.pin.addEventListener("input",()=>fc.pin.setCustomValidity(""));
+  fc.accountId.addEventListener("change",()=>fc.pin.setCustomValidity(""));
+  fc.addEventListener("submit",e=>{
+    if(!e.submitter || e.submitter.value!=="save") return;
+    const err=pinError();
+    if(err){ e.preventDefault(); fc.pin.setCustomValidity(err); fc.pin.reportValidity(); }
+  });
+  function autoExpiry(){ if(fc.start.value) fc.expiry.value=addMonths(fc.start.value,Number(fc.months.value)); }
+  fc.start.addEventListener("change",autoExpiry);
+  fc.months.addEventListener("change",autoExpiry);
+  fc.service.addEventListener("change",()=>fillAccountSelect(fc.service.value,fc.accountId.value));
+  $("#dlgCust").addEventListener("close",async()=>{
+    if($("#dlgCust").returnValue!=="save") return;
+    const old=customers.find(c=>c.id===editingCust)||{};
+    const data=Object.assign(strip(old),{
+      name:fc.name.value.trim(), phone:fc.phone.value.trim(), service:fc.service.value.trim(),
+      accountId:fc.accountId.value, profile:fc.profile.value.trim(), price:fc.price.value===""?"":Number(fc.price.value),
+      start:fc.start.value, months:Number(fc.months.value), expiry:fc.expiry.value, payMethod:fc.payMethod.value, notes:fc.notes.value.trim(),
+      pin:fc.pin.value.trim(), payStatus:fc.payStatus.value,
+      amountPaid:fc.amountPaid.value===""?"":Number(fc.amountPaid.value), datePaid:fc.datePaid.value
+    });
+    if(data.payStatus==="Paid" && data.amountPaid==="" && data.price!=="") data.amountPaid=data.price;
+    if(data.payStatus==="Paid" && !data.datePaid) data.datePaid=todayStr();
+    if(old.expiry && old.expiry!==data.expiry) data.remindedFor="";
+    if(!data.createdAt) data.createdAt=new Date().toISOString();
+    await put("customers",editingCust||newId("c_"),data);
+  });
+
+  // ---------- account form ----------
+  const fa=$("#formAcc");
+  function openAcc(a){
+    editingAcc=a?a.id:null;
+    $("#accTitle").textContent=a?"Edit stock account":"Add stock account";
+    fa.reset();
+    if(a) ["service","login","slots","expiry","cost","notes","tempLink"].forEach(k=>{ if(a[k]!=null) fa[k].value=a[k]; });
+    else fa.expiry.value=addMonths(todayStr(),1);
+    $("#dlgAcc").showModal();
+  }
+  $("#dlgAcc").addEventListener("close",async()=>{
+    if($("#dlgAcc").returnValue!=="save") return;
+    const old=accounts.find(a=>a.id===editingAcc)||{};
+    const data=Object.assign(strip(old),{
+      service:fa.service.value.trim(), login:fa.login.value.trim(), slots:Number(fa.slots.value)||1,
+      expiry:fa.expiry.value, cost:fa.cost.value===""?"":Number(fa.cost.value), notes:fa.notes.value.trim(), tempLink:fa.tempLink.value.trim()
+    });
+    await put("accounts",editingAcc||newId("a_"),data);
+  });
+
+  // ---------- renew ----------
+  const fr=$("#formRenew");
+  function renewBase(c){ return daysLeft(c.expiry)<0?todayStr():c.expiry; }
+  function openRenew(c){
+    renewing=c.id;
+    $("#renewTitle").textContent="Renew "+c.name;
+    fr.reset();
+    fr.months.value=String(c.months||1);
+    fr.expiry.value=addMonths(renewBase(c),Number(fr.months.value));
+    fr.payStatus.value="Paid";
+    fr.amountPaid.value=c.price===""||c.price==null?"":c.price;
+    fr.datePaid.value=todayStr();
+    fr.payMethod.value=c.payMethod||"Whish";
+    $("#dlgRenew").showModal();
+  }
+  fr.months.addEventListener("change",()=>{ const c=customers.find(x=>x.id===renewing); if(c) fr.expiry.value=addMonths(renewBase(c),Number(fr.months.value)); });
+  $("#dlgRenew").addEventListener("close",()=>{
+    if($("#dlgRenew").returnValue!=="save") return;
+    const c=customers.find(x=>x.id===renewing); if(!c) return;
+    put("customers",c.id,Object.assign(strip(c),{
+      months:Number(fr.months.value), expiry:fr.expiry.value, stopped:false, remindedFor:"", lastRenewed:todayStr(),
+      payStatus:fr.payStatus.value, amountPaid:fr.amountPaid.value===""?"":Number(fr.amountPaid.value),
+      datePaid:fr.datePaid.value, payMethod:fr.payMethod.value
+    }));
+  });
+
+  // ---------- settings ----------
+  $("#btnSettings").addEventListener("click",()=>{ $("#formSet").template.value=settings.template||DEFAULT_TEMPLATE; $("#formSet").codeTemplate.value=settings.codeTemplate||DEFAULT_CODE; $("#dlgSet").showModal(); });
+  $("#dlgSet").addEventListener("close",async()=>{
+    if($("#dlgSet").returnValue!=="save") return;
+    settings={template:$("#formSet").template.value.trim()||DEFAULT_TEMPLATE, codeTemplate:$("#formSet").codeTemplate.value.trim()||DEFAULT_CODE};
+    persist(); render();
+  });
+
+  // ---------- actions ----------
+  document.addEventListener("click",async e=>{
+    const t=e.target.closest("[data-remind],[data-renew],[data-stop],[data-edit],[data-del],[data-accrenew],[data-accedit],[data-accdel],.tab");
+    if(!t) return;
+    if(t.classList.contains("tab")){
+      document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b===t?"true":"false"));
+      $("#paneCustomers").hidden=t.dataset.tab!=="customers";
+      $("#paneAccounts").hidden=t.dataset.tab!=="accounts";
+      return;
+    }
+    if(t.dataset.remind){
+      const c=customers.find(x=>x.id===t.dataset.remind);
+      if(c && c.remindedFor!==c.expiry) put("customers",c.id,Object.assign(strip(c),{remindedFor:c.expiry}));
+      return;
+    }
+    if(t.dataset.renew){
+      const c=customers.find(x=>x.id===t.dataset.renew); if(!c) return;
+      openRenew(c);
+      return;
+    }
+    if(t.dataset.stop){
+      const c=customers.find(x=>x.id===t.dataset.stop);
+      if(c) put("customers",c.id,Object.assign(strip(c),{stopped:true}));
+      return;
+    }
+    if(t.dataset.edit){ openCust(customers.find(x=>x.id===t.dataset.edit)); return; }
+    if(t.dataset.del){
+      const c=customers.find(x=>x.id===t.dataset.del);
+      if(c && confirm("Delete "+c.name+"? This can't be undone.")) del("customers",c.id);
+      return;
+    }
+    if(t.dataset.accrenew){
+      const a=accounts.find(x=>x.id===t.dataset.accrenew); if(!a) return;
+      const base=daysLeft(a.expiry)<0?todayStr():a.expiry;
+      put("accounts",a.id,Object.assign(strip(a),{expiry:addMonths(base,1)}));
+      return;
+    }
+    if(t.dataset.accedit){ openAcc(accounts.find(x=>x.id===t.dataset.accedit)); return; }
+    if(t.dataset.accdel){
+      const a=accounts.find(x=>x.id===t.dataset.accdel);
+      if(a && confirm("Delete the "+a.service+" account "+a.login+"?")) del("accounts",a.id);
+    }
+  });
+
+  $("#btnAddCust").addEventListener("click",()=>openCust(null));
+  $("#btnAddAcc").addEventListener("click",()=>openAcc(null));
+  ["#q","#fService","#fStatus"].forEach(s=>$(s).addEventListener("input",renderCustomers));
+
+  // ---------- export ----------
+  function saveFile(name,text,type){
+    const url=URL.createObjectURL(new Blob([text],{type}));
+    const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },500);
+  }
+  $("#btnExport").addEventListener("click",()=>{
+    const cols=["name","phone","service","profile","pin","start","months","expiry","price","payStatus","amountPaid","datePaid","payMethod","notes"];
+    const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const csv=[cols.concat("status").join(",")].concat(customers.map(c=>cols.map(k=>q(c[k])).concat(q(status(c))).join(","))).join("\n");
+    saveFile("customers-"+todayStr()+".csv","\ufeff"+csv,"text/csv");
+  });
+  $("#btnBackup").addEventListener("click",()=>{
+    saveFile("renewals-backup-"+todayStr()+".json",JSON.stringify({customers,accounts,settings},null,2),"application/json");
+  });
+  $("#btnRestore").addEventListener("click",()=>$("#fileRestore").click());
+  $("#fileRestore").addEventListener("change",e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const d=JSON.parse(r.result);
+        if(!Array.isArray(d.customers)) throw 0;
+        if(!confirm("Replace everything here with this backup ("+d.customers.length+" customers)?")) return;
+        customers=d.customers; accounts=d.accounts||[]; settings=Object.assign({template:DEFAULT_TEMPLATE,codeTemplate:DEFAULT_CODE},d.settings||{});
+        persist(); render();
+      }catch(err){ alert("That file isn't a tracker backup."); }
+      e.target.value="";
+    };
+    r.readAsText(f);
+  });
+
+  // Refresh alerts at midnight and when the tab comes back into view
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) render(); });
+  setInterval(render,60*60*1000);
+
+  // ---------- boot ----------
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
