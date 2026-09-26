@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renewals Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#1B2233; --muted:#667085; --line:#DDE2EA;
+  --due:#C2185B; --due-soft:#FCE4EE; --soon:#B7791F; --soon-soft:#FDF3DC;
+  --ok:#0F7F80; --ok-soft:#DDF3F2; --wa:#1E8E4E;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151D; --surface:#1B2030; --ink:#E9ECF3; --muted:#98A1B3; --line:#2C3346;
+    --due:#FF5C93; --due-soft:#3A1826; --soon:#F0B44C; --soon-soft:#352A14;
+    --ok:#3CC7C4; --ok-soft:#123331; --wa:#3CCB7A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151D; --surface:#1B2030; --ink:#E9ECF3; --muted:#98A1B3; --line:#2C3346;
+  --due:#FF5C93; --due-soft:#3A1826; --soon:#F0B44C; --soon-soft:#352A14;
+  --ok:#3CC7C4; --ok-soft:#123331; --wa:#3CCB7A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 64px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:28px}
+h1{font:800 clamp(2rem,6vw,3.2rem)/1 var(--display);letter-spacing:-.02em;margin:0}
+.today{color:var(--muted);margin-top:6px}
+.summary{color:var(--muted);margin-top:4px}
+.summary b{color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.wa{color:var(--wa);border-color:color-mix(in srgb,var(--wa) 40%,var(--line))}
+.btn.small{padding:6px 10px;font-size:.88rem;border-radius:8px}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--due)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.tab:focus-visible{outline:3px solid color-mix(in srgb,var(--ok) 60%,transparent);outline-offset:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.banner{background:var(--soon-soft);color:var(--ink);border-left:4px solid var(--soon);padding:10px 14px;border-radius:8px;margin-bottom:20px;display:none}
+
+/* The alert board — the one loud element */
+.board{background:var(--surface);border:2px solid var(--due);border-radius:18px;padding:18px 18px 8px;margin-bottom:32px}
+.board.calm{border-color:var(--line)}
+.board h2{font:700 1.35rem/1.2 var(--display);margin:0 0 4px}
+.board p.sub{margin:0 0 12px;color:var(--muted)}
+.due-row{display:grid;grid-template-columns:84px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.count{font:800 2.6rem/1 var(--display);letter-spacing:-.03em;text-align:center}
+.count small{display:block;font:700 .75rem/1.2 var(--body);letter-spacing:0;color:var(--muted);margin-top:4px}
+.count.over{color:var(--due)} .count.zero{color:var(--due)} .count.near{color:var(--soon)}
+.who b{font-size:1.05rem}
+.who .meta{color:var(--muted);font-size:.92rem}
+.tag{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.tag.acc{background:var(--soon-soft);color:var(--soon)}
+.tag.done{background:var(--ok-soft);color:var(--ok)}
+.empty{padding:16px 0 12px;color:var(--muted)}
+
+/* Tabs + list */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tab{background:none;border:none;padding:10px 14px;font:700 1.05rem var(--display);color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.toolbar input,.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.toolbar input{flex:1 1 200px}
+.spacer{flex:1}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:1.4fr 1.1fr 1fr .9fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.row:first-child{border-top:none}
+.row.head{font-size:.85rem;color:var(--muted);font-weight:700;background:color-mix(in srgb,var(--bg) 60%,var(--surface))}
+.row .muted{color:var(--muted);font-size:.9rem}
+.pill{display:inline-block;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.soon{background:var(--soon-soft);color:var(--soon)}
+.pill.due{background:var(--due-soft);color:var(--due)}
+.pill.stop{background:var(--line);color:var(--muted)}
+.acc-row{grid-template-columns:1.2fr 1.4fr .8fr 1fr auto}
+.slots{font-weight:700}
+.slots.full{color:var(--due)}
+
+/* Reports */
+.report-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:16px}
+.report-bar label{flex-direction:column}
+.report-bar input,.report-bar select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-weight:400;color:var(--ink)}
+.totals{display:flex;flex-wrap:wrap;gap:28px;margin:4px 0 18px}
+.totals div{font-size:.88rem;color:var(--muted);font-weight:700}
+.totals b{display:block;font:800 1.8rem/1.1 var(--display);color:var(--ink)}
+.totals .neg b{color:var(--due)}
+.tx-row{grid-template-columns:.9fr 1.3fr 1.1fr .9fr auto}
+.m-row{grid-template-columns:1fr .8fr .8fr 1fr 1fr 1fr}
+.m-row.total{font-weight:700;background:color-mix(in srgb,var(--bg) 60%,var(--surface))}
+.bar{height:6px;border-radius:3px;background:var(--ok);margin-top:4px;min-width:2px}
+.amt-in{color:var(--ok);font-weight:700}
+.amt-out{color:var(--due);font-weight:700}
+.hist{border-top:1px solid var(--line);padding:10px 0;display:flex;justify-content:space-between;gap:12px}
+.hist:first-child{border-top:none}
+
+/* Dialog */
+dialog{border:none;border-radius:16px;padding:0;background:var(--surface);color:var(--ink);width:min(560px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(10,14,24,.55)}
+.dlg{padding:22px;overflow-y:auto;max-height:90vh}
+.dlg h3{font:700 1.4rem var(--display);margin:0 0 16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:.88rem;font-weight:700;color:var(--muted)}
+label input,label select,label textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-weight:400;color:var(--ink)}
+.hint{font-size:.82rem;color:var(--muted);font-weight:400}
+.dlg .actions{justify-content:flex-end;margin-top:18px}
+
+@media (max-width:760px){
+  .row.head{display:none}
+  .row,.acc-row,.tx-row,.m-row{grid-template-columns:1fr 1fr;gap:6px 12px}
+  .row .cell-actions{grid-column:1/-1}
+  .due-row{grid-template-columns:64px 1fr}
+  .due-row .actions{grid-column:1/-1}
+  .count{font-size:2rem}
+  .grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){
+  .board:not(.calm){animation:pulse 1.2s ease-out 1}
+  @keyframes pulse{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--due) 45%,transparent)}to{box-shadow:0 0 0 14px transparent}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Renewals</h1>
+      <div class="today" id="today"></div>
+      <div class="summary" id="summary"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnSettings" type="button">Message templates</button>
+      <button class="btn" id="btnImport" type="button">Import Excel</button>
+      <input type="file" id="fileImport" accept=".xlsx,.xls" hidden>
+      <button class="btn" id="btnAddAcc" type="button">Add account</button>
+      <button class="btn primary" id="btnAddCust" type="button">+ Add customer</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner">Saving isn't working in this browser (private mode blocks it). Open the file in a normal window.</div>
+
+  <section class="board" id="board" aria-live="polite">
+    <h2 id="boardTitle">Needs a reminder</h2>
+    <p class="sub">Customers and stock accounts ending within 3 days, plus anything overdue.</p>
+    <div id="dueList"></div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="customers">Customers</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="accounts">Stock accounts</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="tx">Transactions</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="monthly">Monthly revenue</button>
+  </div>
+
+  <div id="paneCustomers">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Search name or number" aria-label="Search customers">
+      <select id="fService" aria-label="Filter by service"><option value="">All services</option></select>
+      <select id="fStatus" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="active">Active</option>
+        <option value="soon">Ending in 3 days</option>
+        <option value="expired">Expired</option>
+        <option value="stopped">Not renewing</option>
+        <option value="unpaid">Payment pending</option>
+      </select>
+      <span class="spacer"></span>
+      <button class="btn small" id="btnExport" type="button">Export CSV</button>
+      <button class="btn small" id="btnBackup" type="button">Download backup</button>
+      <button class="btn small" id="btnRestore" type="button">Restore backup</button>
+      <input type="file" id="fileRestore" accept=".json,application/json" hidden>
+    </div>
+    <div class="list" id="custList"></div>
+  </div>
+
+  <div id="paneAccounts" hidden>
+    <p class="hint" style="margin:0 0 12px">Passwords are saved only in this browser on this device. Anyone using this device can see them.</p>
+    <div class="list" id="accList"></div>
+  </div>
+
+  <div id="paneTx" hidden>
+    <div class="report-bar">
+      <label>From<input type="date" id="txFrom"></label>
+      <label>To<input type="date" id="txTo"></label>
+      <button class="btn small" type="button" data-range="today">Today</button>
+      <button class="btn small" type="button" data-range="month">This month</button>
+      <button class="btn small" type="button" data-range="last">Last month</button>
+      <button class="btn small" type="button" data-range="year">This year</button>
+      <span class="spacer"></span>
+      <button class="btn small" type="button" id="btnTxExport">Export report</button>
+    </div>
+    <div class="totals" id="txTotals"></div>
+    <div class="list" id="txList"></div>
+  </div>
+
+  <div id="paneMonthly" hidden>
+    <div class="report-bar">
+      <label>Year<select id="mYear"></select></label>
+    </div>
+    <div class="totals" id="mTotals"></div>
+    <div class="list" id="mList"></div>
+  </div>
+</div>
+
+<dialog id="dlgCust"><form class="dlg" method="dialog" id="formCust">
+  <h3 id="custTitle">Add customer</h3>
+  <div class="grid">
+    <label>Name<input name="name" required></label>
+    <label>WhatsApp number<input name="phone" required inputmode="tel" placeholder="03 123 456"></label>
+    <label>Service<input name="service" list="serviceList" required placeholder="Netflix"></label>
+    <label>Stock account<select name="accountId"><option value="">None</option></select></label>
+    <label>Profile / slot<input name="profile" placeholder="Profile 3"></label>
+    <label>Profile passcode (4 digits)
+      <span style="display:flex;gap:6px"><input name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234" style="flex:1;min-width:0"><button class="btn small" type="button" id="btnPin">Random</button></span>
+      <span class="hint">Must be different for each user on the same account.</span></label>
+    <label>Start date<input name="start" type="date" required></label>
+    <label>Duration<select name="months">
+      <option value="1">1 month</option><option value="3">3 months</option>
+      <option value="6">6 months</option><option value="12">12 months</option>
+    </select></label>
+    <label class="full">Ends on<input name="expiry" type="date" required><span class="hint">Filled in from start date and duration. You can change it.</span></label>
+    <label>Price ($)<input name="price" type="number" min="0" step="0.5"></label>
+    <label>Payment status<select name="payStatus">
+      <option>Paid</option><option>Pending</option><option>Partial</option>
+    </select></label>
+    <label>Amount paid ($)<input name="amountPaid" type="number" min="0" step="0.5"></label>
+    <label>Date paid<input name="datePaid" type="date"></label>
+    <label>Paid via<select name="payMethod">
+      <option>Whish</option><option>OMT</option><option>Cash</option><option>Other</option>
+    </select></label>
+    <label class="full">Notes<textarea name="notes" rows="2"></textarea></label>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save customer</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgRenew"><form class="dlg" method="dialog" id="formRenew">
+  <h3 id="renewTitle">Renew</h3>
+  <div class="grid">
+    <label>Renew for<select name="months">
+      <option value="1">1 month</option><option value="3">3 months</option>
+      <option value="6">6 months</option><option value="12">12 months</option>
+    </select></label>
+    <label>New end date<input name="expiry" type="date" required></label>
+    <label>Payment status<select name="payStatus">
+      <option>Paid</option><option>Pending</option><option>Partial</option>
+    </select></label>
+    <label>Amount paid ($)<input name="amountPaid" type="number" min="0" step="0.5"></label>
+    <label>Date paid<input name="datePaid" type="date"></label>
+    <label>Paid via<select name="payMethod">
+      <option>Whish</option><option>OMT</option><option>Cash</option><option>Other</option>
+    </select></label>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save renewal</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgAcc"><form class="dlg" method="dialog" id="formAcc">
+  <h3 id="accTitle">Add stock account</h3>
+  <div class="grid">
+    <label>Service<input name="service" list="serviceList" required placeholder="Shahid VIP"></label>
+    <label>Login email<input name="login" required placeholder="netflix1@..."></label>
+    <label>Password<input name="password" autocomplete="off"></label>
+    <label>Number of slots<input name="slots" type="number" min="1" value="5" required></label>
+    <label>Account renews on<input name="expiry" type="date" required></label>
+    <label>Cost ($)<input name="cost" type="number" min="0" step="0.5"></label>
+    <label>Notes<input name="notes"></label>
+    <label class="full">Temporary code link<input name="tempLink" type="url" placeholder="https://..."><span class="hint">Sent to customers when Netflix asks for a temporary code.</span></label>
+  </div>
+  <p class="hint">Saved only in this browser on this device.</p>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save account</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgHist"><form class="dlg" method="dialog">
+  <h3 id="histTitle">History</h3>
+  <div class="totals" id="histTotals"></div>
+  <div id="histList"></div>
+  <div class="actions"><button class="btn primary" value="close" type="submit">Close</button></div>
+</form></dialog>
+
+<dialog id="dlgImport"><form class="dlg" method="dialog">
+  <h3>Import from Excel</h3>
+  <div class="totals" id="impTotals"></div>
+  <div id="impSkipped"></div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" type="submit">Cancel</button>
+    <button class="btn primary" value="import" type="submit" id="btnDoImport">Import</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgSet"><form class="dlg" method="dialog" id="formSet">
+  <h3>Reminder message</h3>
+  <label>WhatsApp message<textarea name="template" rows="5"></textarea>
+  <span class="hint">Use {name}, {service}, {date} and {price}. They're filled in for each customer.</span></label>
+  <label style="margin-top:14px">Login details<textarea name="loginTemplate" rows="8"></textarea>
+  <span class="hint">Use {name}, {service}, {email}, {password}, {profile} and {pin}.</span></label>
+  <label style="margin-top:14px">Temporary code steps<textarea name="codeTemplate" rows="7"></textarea>
+  <span class="hint">Use {name} and {link}. {link} is the temporary code link of the customer's stock account.</span></label>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save message</button>
+  </div>
+</form></dialog>
+
+<datalist id="serviceList">
+  <option value="Netflix"><option value="Shahid VIP"><option value="Anghami Plus"><option value="OSN+">
+  <option value="StarzPlay"><option value="YouTube Premium"><option value="Spotify"><option value="TOD">
+</datalist>
+
+<script>
+(function(){
+  const DEFAULT_TEMPLATE = "Hi {name}, your {service} subscription ends on {date}. To keep it running, send {price} via Whish or OMT and reply here with the screenshot. Thank you!";
+  
+  const DEFAULT_CODE = "Hi {name}, if Netflix asks for a temporary code, follow these steps:\n\nStep 1: Click on \"Update Netflix Household\"\nStep 2: Click \"Send email\"\nStep 3: Open this link: {link}\nStep 4: The code will appear after 1 minute. Enter it on Netflix.";
+  const DEFAULT_LOGIN = "Hi {name}, here are your {service} login details:\n\nEmail: {email}\nPassword: {password}\nProfile: {profile}\nProfile passcode: {pin}\n\nPlease use your own profile only and don't change the password or passcode. Enjoy!";
+  const DEFAULTS = { template: DEFAULT_TEMPLATE, codeTemplate: DEFAULT_CODE, loginTemplate: DEFAULT_LOGIN };
+  let customers = [], accounts = [], transactions = [], settings = Object.assign({}, DEFAULTS);
+  let renewing = null;
+  let editingCust = null, editingAcc = null;
+  const $ = s => document.querySelector(s);
+
+  // ---------- dates ----------
+  function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function toUTC(s){ const [y,m,d]=s.split("-").map(Number); return Date.UTC(y,m-1,d); }
+  function daysLeft(exp){ if(!exp) return 9999; return Math.round((toUTC(exp)-toUTC(todayStr()))/864e5); }
+  function addMonths(s,n){
+    const [y,m,d]=s.split("-").map(Number);
+    const last=new Date(Date.UTC(y,m-1+n+1,0)).getUTCDate();
+    const t=new Date(Date.UTC(y,m-1+n,Math.min(d,last)));
+    return t.toISOString().slice(0,10);
+  }
+  function addDays(s,n){ return new Date(toUTC(s)+n*864e5).toISOString().slice(0,10); }
+  function fmt(s){ if(!s) return "—"; return new Date(toUTC(s)).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}); }
+  function esc(v){ return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function money(p){ return (p===""||p==null||isNaN(p)) ? "" : "$"+Number(p); }
+  function newId(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  function status(c){
+    if(c.stopped) return "stopped";
+    const d=daysLeft(c.expiry);
+    if(d<0) return "expired";
+    if(d<=3) return "soon";
+    return "active";
+  }
+
+  // ---------- links ----------
+  function waNumber(raw){
+    let n=String(raw||"").replace(/\D/g,"");
+    if(n.startsWith("00")) n=n.slice(2);
+    if(n.startsWith("961")) return n;
+    if(n.startsWith("0")) n=n.slice(1);
+    if(n.length<=8) return "961"+n;
+    return n;
+  }
+  function waLink(c){
+    const msg=(settings.template||DEFAULT_TEMPLATE)
+      .replaceAll("{name}",c.name||"").replaceAll("{service}",c.service||"")
+      .replaceAll("{date}",fmt(c.expiry)).replaceAll("{price}",money(c.price)||"the renewal amount");
+    return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
+  }
+  function accOf(c){ return accounts.find(a=>a.id===c.accountId); }
+  function codeLink(c){
+    const a=accOf(c);
+    const msg=(settings.codeTemplate||DEFAULT_CODE).replaceAll("{name}",c.name||"").replaceAll("{link}",(a&&a.tempLink)||"");
+    return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
+  }
+  function loginLink(c){
+    const a=accOf(c)||{};
+    const msg=(settings.loginTemplate||DEFAULT_LOGIN)
+      .replaceAll("{name}",c.name||"").replaceAll("{service}",c.service||"")
+      .replaceAll("{email}",a.login||"").replaceAll("{password}",a.password||"")
+      .replaceAll("{profile}",c.profile||"").replaceAll("{pin}",c.pin||"");
+    return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
+  }
+  function logTx(t){
+    transactions.push(Object.assign({id:newId("t_"),date:todayStr(),amount:0,loggedAt:new Date().toISOString()},t));
+  }
+  function num(v){ return (v===""||v==null||isNaN(v))?0:Number(v); }
+  function unpaid(c){ return c.payStatus==="Pending"||c.payStatus==="Partial"; }
+  function payHtml(c){
+    if(!c.payStatus) return "";
+    if(c.payStatus==="Paid") return '<span class="pill ok">Paid</span><div class="muted">'+esc(money(c.amountPaid))+(c.datePaid?' on '+fmt(c.datePaid):'')+(c.payMethod?' via '+esc(c.payMethod):'')+'</div>';
+    if(c.payStatus==="Partial") return '<span class="pill soon">Partial</span><div class="muted">'+esc(money(c.amountPaid)||"$0")+' of '+esc(money(c.price)||"?")+(c.datePaid?' on '+fmt(c.datePaid):'')+'</div>';
+    return '<span class="pill due">Payment pending</span><div class="muted">'+esc(money(c.price))+' due</div>';
+  }
+  function calLink(title,expiry){
+    let day=addDays(expiry,-3);
+    if(toUTC(day)<toUTC(todayStr())) day=todayStr();
+    const d=day.replace(/-/g,"");
+    const p=new URLSearchParams({action:"TEMPLATE",text:title,dates:d+"T100000/"+d+"T101500",ctz:"Asia/Beirut",details:"Ends on "+fmt(expiry)});
+    return "https://calendar.google.com/calendar/render?"+p.toString();
+  }
+
+  // ---------- storage ----------
+  const KEY="renewals-tracker-v1";
+  function persist(){
+    try{ localStorage.setItem(KEY,JSON.stringify({customers,accounts,settings,transactions})); }
+    catch(e){ $("#banner").style.display="block"; }
+  }
+  function load(){
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(raw){ const d=JSON.parse(raw); customers=d.customers||[]; accounts=d.accounts||[]; transactions=d.transactions||[]; settings=Object.assign({},DEFAULTS,d.settings||{}); }
+      migrate();
+    }catch(e){ $("#banner").style.display="block"; }
+  }
+  // Customers added before history existed get one starting entry
+  function migrate(){
+    let changed=false;
+    customers.forEach(c=>{
+      if(!transactions.some(t=>t.customerId===c.id)){
+        logTx({date:c.datePaid||c.start||todayStr(),kind:"New",customerId:c.id,customerName:c.name,service:c.service,months:c.months,
+          amount:num(c.amountPaid),payStatus:c.payStatus||"",method:c.payMethod||"",expiry:c.expiry});
+        changed=true;
+      }
+    });
+    if(changed) persist();
+  }
+  async function put(col,id,data){
+    const arr=col==="customers"?customers:accounts;
+    const i=arr.findIndex(x=>x.id===id);
+    const row=Object.assign({id},data);
+    if(i>=0) arr[i]=row; else arr.push(row);
+    persist(); render();
+  }
+  async function del(col,id){
+    if(col==="customers") customers=customers.filter(x=>x.id!==id); else accounts=accounts.filter(x=>x.id!==id);
+    persist(); render();
+  }
+  function strip(o){ const c=Object.assign({},o); delete c.id; return c; }
+
+  // ---------- render ----------
+  function render(){
+    $("#today").textContent="Today is "+fmt(todayStr());
+    const active=customers.filter(c=>["active","soon"].includes(status(c))).length;
+    const soon=customers.filter(c=>status(c)==="soon").length;
+    const expired=customers.filter(c=>status(c)==="expired").length;
+    const owed=customers.filter(c=>unpaid(c)&&!c.stopped).length;
+    $("#summary").innerHTML="<b>"+active+"</b> active, <b>"+soon+"</b> ending within 3 days, <b>"+expired+"</b> expired, <b>"+owed+"</b> payment pending";
+    renderDue(); renderServices(); renderCustomers(); renderAccounts(); renderTx(); renderMonthly();
+  }
+
+  function countHtml(d){
+    const cls=d<0?"over":d===0?"zero":"near";
+    const big=d<0?Math.abs(d):d;
+    const label=d<0?(big===1?"day late":"days late"):d===0?"ends today":(d===1?"day left":"days left");
+    return '<div class="count '+cls+'">'+big+'<small>'+label+'</small></div>';
+  }
+
+  function renderDue(){
+    const items=[];
+    customers.forEach(c=>{ const s=status(c); if(s==="soon"||s==="expired") items.push({kind:"c",d:daysLeft(c.expiry),x:c}); });
+    accounts.forEach(a=>{ const d=daysLeft(a.expiry); if(d<=3) items.push({kind:"a",d,x:a}); });
+    items.sort((a,b)=>a.d-b.d);
+    const board=$("#board");
+    board.classList.toggle("calm",items.length===0);
+    $("#boardTitle").textContent=items.length?("Needs a reminder ("+items.length+")"):"Nothing to renew in the next 3 days";
+    if(!items.length){ $("#dueList").innerHTML='<div class="empty">You\'re clear. New alerts appear here automatically 3 days before any end date.</div>'; return; }
+    $("#dueList").innerHTML=items.map(it=>{
+      const x=it.x;
+      if(it.kind==="c"){
+        const reminded=x.remindedFor===x.expiry;
+        return '<div class="due-row">'+countHtml(it.d)+
+          '<div class="who"><b>'+esc(x.name)+'</b>'+(reminded?'<span class="tag done">Reminded</span>':'')+(unpaid(x)?'<span class="tag acc">Payment pending</span>':'')+
+          '<div class="meta">'+esc(x.service)+(x.profile?', '+esc(x.profile):'')+'. Ends '+fmt(x.expiry)+(x.price?'. '+money(x.price):'')+'</div></div>'+
+          '<div class="actions">'+
+            '<a class="btn small wa" href="'+waLink(x)+'" target="_blank" rel="noopener" data-remind="'+x.id+'">'+(reminded?'Message again':'Send WhatsApp reminder')+'</a>'+
+            '<button class="btn small" data-renew="'+x.id+'" type="button">Renew</button>'+
+            '<button class="btn small ghost" data-stop="'+x.id+'" type="button">Not renewing</button>'+
+          '</div></div>';
+      }
+      return '<div class="due-row">'+countHtml(it.d)+
+        '<div class="who"><b>'+esc(x.service)+'</b><span class="tag acc">Stock account</span>'+
+        '<div class="meta">'+esc(x.login)+'. Pay the platform by '+fmt(x.expiry)+'</div></div>'+
+        '<div class="actions"><button class="btn small" data-accrenew="'+x.id+'" type="button">Mark paid (+1 month)</button></div></div>';
+    }).join("");
+  }
+
+  function renderServices(){
+    const sel=$("#fService"), cur=sel.value;
+    const set=[...new Set(customers.map(c=>c.service).filter(Boolean))].sort();
+    sel.innerHTML='<option value="">All services</option>'+set.map(s=>'<option'+(s===cur?' selected':'')+'>'+esc(s)+'</option>').join("");
+  }
+
+  function renderCustomers(){
+    const q=$("#q").value.trim().toLowerCase(), fs=$("#fService").value, fst=$("#fStatus").value;
+    const rows=customers.filter(c=>{
+      if(q && !((c.name||"").toLowerCase().includes(q) || (c.phone||"").replace(/\D/g,"").includes(q.replace(/\D/g,"")||"~"))) return false;
+      if(fs && c.service!==fs) return false;
+      if(fst==="unpaid"){ if(!unpaid(c)) return false; }
+      else if(fst && status(c)!==fst) return false;
+      return true;
+    }).sort((a,b)=>(a.expiry||"").localeCompare(b.expiry||""));
+    if(!customers.length){ $("#custList").innerHTML='<div class="empty" style="padding:20px">No customers yet. Add your first one to start tracking end dates.</div>'; return; }
+    if(!rows.length){ $("#custList").innerHTML='<div class="empty" style="padding:20px">No customers match these filters.</div>'; return; }
+    const pill={active:['ok','Active'],soon:['soon','Ending soon'],expired:['due','Expired'],stopped:['stop','Not renewing']};
+    const accName=id=>{ const a=accounts.find(a=>a.id===id); return a?a.login:""; };
+    $("#custList").innerHTML='<div class="row head"><div>Customer</div><div>Service</div><div>Ends</div><div>Status and payment</div><div></div></div>'+
+      rows.map(c=>{ const s=status(c), d=daysLeft(c.expiry);
+        return '<div class="row">'+
+          '<div><b>'+esc(c.name)+'</b><div class="muted">'+esc(c.phone)+'</div></div>'+
+          '<div>'+esc(c.service)+'<div class="muted">'+esc([c.profile,c.pin?"PIN "+c.pin:"",accName(c.accountId)].filter(Boolean).join(", "))+'</div></div>'+
+          '<div>'+fmt(c.expiry)+'<div class="muted">'+(s==="stopped"?"":d<0?Math.abs(d)+" days ago":d===0?"today":"in "+d+" days")+'</div></div>'+
+          '<div><span class="pill '+pill[s][0]+'">'+pill[s][1]+'</span> '+payHtml(c)+'</div>'+
+          '<div class="actions cell-actions">'+
+            '<a class="btn small wa" href="'+waLink(c)+'" target="_blank" rel="noopener" data-remind="'+c.id+'" title="Send WhatsApp reminder">WhatsApp</a>'+
+            ((accOf(c)&&accOf(c).tempLink)?'<a class="btn small wa" href="'+codeLink(c)+'" target="_blank" rel="noopener" title="Send the temporary code steps">Code steps</a>':'')+
+            '<a class="btn small" href="'+calLink("Renew "+(c.name||"")+" ("+(c.service||"")+")",c.expiry)+'" target="_blank" rel="noopener" title="Add a phone calendar alert 3 days before the end date">Calendar alert</a>'+
+            '<button class="btn small" data-renew="'+c.id+'" type="button">Renew</button>'+
+            (accOf(c)?'<a class="btn small wa" href="'+loginLink(c)+'" target="_blank" rel="noopener" title="Send login details">Send login</a>':'')+
+            '<button class="btn small ghost" data-history="'+c.id+'" type="button">History</button>'+
+            '<button class="btn small ghost" data-edit="'+c.id+'" type="button">Edit</button>'+
+            '<button class="btn small ghost danger" data-del="'+c.id+'" type="button">Delete</button>'+
+          '</div></div>'; }).join("");
+  }
+
+  function renderAccounts(){
+    if(!accounts.length){ $("#accList").innerHTML='<div class="empty" style="padding:20px">No stock accounts yet. Add one to track its slots and when you need to pay the platform.</div>'; return; }
+    const rows=[...accounts].sort((a,b)=>(a.expiry||"").localeCompare(b.expiry||""));
+    $("#accList").innerHTML='<div class="row head acc-row"><div>Service</div><div>Login</div><div>Slots used</div><div>Renews</div><div></div></div>'+
+      rows.map(a=>{
+        const used=customers.filter(c=>c.accountId===a.id && ["active","soon"].includes(status(c))).length;
+        const total=Number(a.slots)||0, d=daysLeft(a.expiry);
+        return '<div class="row acc-row">'+
+          '<div><b>'+esc(a.service)+'</b><div class="muted">'+esc(money(a.cost))+'</div></div>'+
+          '<div>'+esc(a.login)+'<div class="muted">'+esc([a.password?"Password saved":"No password",a.tempLink?"Code link saved":"No code link",a.notes].filter(Boolean).join(", "))+'</div></div>'+
+          '<div class="slots'+(used>=total?' full':'')+'">'+used+' / '+total+'<div class="muted">'+(total-used>0?(total-used)+" free":"Full")+'</div></div>'+
+          '<div>'+fmt(a.expiry)+'<div class="muted">'+(d<0?Math.abs(d)+" days ago":d===0?"today":"in "+d+" days")+'</div></div>'+
+          '<div class="actions cell-actions">'+
+            '<a class="btn small" href="'+calLink("Pay "+(a.service||"")+" account ("+(a.login||"")+")",a.expiry)+'" target="_blank" rel="noopener">Calendar alert</a>'+
+            '<button class="btn small" data-accrenew="'+a.id+'" type="button">Mark paid</button>'+
+            '<button class="btn small ghost" data-accedit="'+a.id+'" type="button">Edit</button>'+
+            '<button class="btn small ghost danger" data-accdel="'+a.id+'" type="button">Delete</button>'+
+          '</div></div>';
+      }).join("");
+  }
+
+  // ---------- transactions report ----------
+  function monthStart(d){ return d.slice(0,8)+"01"; }
+  function monthEnd(d){ return addDays(addMonths(monthStart(d),1),-1); }
+  function setRange(r){
+    const t=todayStr();
+    if(r==="today"){ $("#txFrom").value=t; $("#txTo").value=t; }
+    if(r==="month"){ $("#txFrom").value=monthStart(t); $("#txTo").value=monthEnd(t); }
+    if(r==="last"){ const l=addMonths(monthStart(t),-1); $("#txFrom").value=l; $("#txTo").value=monthEnd(l); }
+    if(r==="year"){ $("#txFrom").value=t.slice(0,4)+"-01-01"; $("#txTo").value=t.slice(0,4)+"-12-31"; }
+    renderTx();
+  }
+  function txInRange(){
+    const f=$("#txFrom").value||"0000-00-00", to=$("#txTo").value||"9999-12-31";
+    return transactions.filter(t=>t.date>=f && t.date<=to).sort((a,b)=>(b.date+b.loggedAt).localeCompare(a.date+a.loggedAt));
+  }
+  function sums(list){
+    const income=list.filter(t=>t.kind!=="Stock account").reduce((s,t)=>s+num(t.amount),0);
+    const costs=list.filter(t=>t.kind==="Stock account").reduce((s,t)=>s+Math.abs(num(t.amount)),0);
+    return {income,costs,profit:income-costs};
+  }
+  function usd(n){ const v=Math.round(n*100)/100; return (v<0?"-$":"$")+Math.abs(v).toLocaleString("en-US"); }
+  function txRowHtml(t,showDelete){
+    const out=t.kind==="Stock account";
+    return '<div class="row tx-row">'+
+      '<div>'+fmt(t.date)+'<div class="muted">'+esc(t.kind)+(t.months?", "+t.months+" mo":"")+'</div></div>'+
+      '<div><b>'+esc(t.customerName||"")+'</b><div class="muted">'+esc(t.service||"")+'</div></div>'+
+      '<div>'+esc(t.payStatus||"")+'<div class="muted">'+esc(t.method||"")+(t.expiry?" · until "+fmt(t.expiry):"")+'</div></div>'+
+      '<div class="'+(out||num(t.amount)<0?"amt-out":"amt-in")+'">'+usd(num(t.amount))+'</div>'+
+      '<div class="actions cell-actions">'+(showDelete?'<button class="btn small ghost danger" data-txdel="'+t.id+'" type="button">Delete</button>':'')+'</div>'+
+    '</div>';
+  }
+  function renderTx(){
+    if(!$("#txFrom").value){ const t=todayStr(); $("#txFrom").value=monthStart(t); $("#txTo").value=monthEnd(t); }
+    const list=txInRange(), s=sums(list);
+    $("#txTotals").innerHTML='<div>Customer payments<b>'+usd(s.income)+'</b></div><div>Stock account costs<b>'+usd(s.costs)+'</b></div>'+
+      '<div class="'+(s.profit<0?"neg":"")+'">Profit<b>'+usd(s.profit)+'</b></div><div>Transactions<b>'+list.length+'</b></div>';
+    $("#txList").innerHTML=list.length
+      ? '<div class="row head tx-row"><div>Date</div><div>Customer</div><div>Status</div><div>Amount</div><div></div></div>'+list.map(t=>txRowHtml(t,true)).join("")
+      : '<div class="empty" style="padding:20px">No transactions between these dates.</div>';
+  }
+  $("#txFrom").addEventListener("change",renderTx);
+  $("#txTo").addEventListener("change",renderTx);
+  $("#btnTxExport").addEventListener("click",()=>{
+    const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const cols=["date","kind","customerName","service","months","payStatus","method","amount","expiry"];
+    const list=txInRange();
+    const csv=[cols.join(",")].concat(list.map(t=>cols.map(k=>q(t[k])).join(","))).join("\n");
+    saveFile("transactions-"+$("#txFrom").value+"-to-"+$("#txTo").value+".csv","\ufeff"+csv,"text/csv");
+  });
+
+  // ---------- monthly revenue ----------
+  const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function renderMonthly(){
+    const sel=$("#mYear"), cur=sel.value||todayStr().slice(0,4);
+    const years=[...new Set(transactions.map(t=>t.date.slice(0,4)).concat([todayStr().slice(0,4)]))].sort().reverse();
+    sel.innerHTML=years.map(y=>'<option'+(y===cur?' selected':'')+'>'+y+'</option>').join("");
+    const rows=MONTHS.map((m,i)=>{
+      const key=cur+"-"+String(i+1).padStart(2,"0");
+      const list=transactions.filter(t=>t.date.startsWith(key));
+      const s=sums(list);
+      return {m,s,newC:list.filter(t=>t.kind==="New").length,ren:list.filter(t=>t.kind==="Renewal").length};
+    });
+    const max=Math.max(1,...rows.map(r=>r.s.income));
+    const tot=rows.reduce((a,r)=>({income:a.income+r.s.income,costs:a.costs+r.s.costs,profit:a.profit+r.s.profit,newC:a.newC+r.newC,ren:a.ren+r.ren}),{income:0,costs:0,profit:0,newC:0,ren:0});
+    $("#mTotals").innerHTML='<div>Revenue '+cur+'<b>'+usd(tot.income)+'</b></div><div>Stock account costs<b>'+usd(tot.costs)+'</b></div>'+
+      '<div class="'+(tot.profit<0?"neg":"")+'">Profit<b>'+usd(tot.profit)+'</b></div>';
+    $("#mList").innerHTML='<div class="row head m-row"><div>Month</div><div>New</div><div>Renewals</div><div>Revenue</div><div>Costs</div><div>Profit</div></div>'+
+      rows.map(r=>'<div class="row m-row"><div><b>'+r.m+'</b></div><div>'+r.newC+'</div><div>'+r.ren+'</div>'+
+        '<div class="amt-in">'+usd(r.s.income)+'<div class="bar" style="width:'+Math.round(r.s.income/max*100)+'%"></div></div>'+
+        '<div>'+usd(r.s.costs)+'</div><div class="'+(r.s.profit<0?"amt-out":"")+'"><b>'+usd(r.s.profit)+'</b></div></div>').join("")+
+      '<div class="row m-row total"><div>Total</div><div>'+tot.newC+'</div><div>'+tot.ren+'</div><div>'+usd(tot.income)+'</div><div>'+usd(tot.costs)+'</div><div>'+usd(tot.profit)+'</div></div>';
+  }
+  $("#mYear").addEventListener("change",renderMonthly);
+
+  // ---------- Excel import ----------
+  let importPlan=null;
+  function loadXLSX(){
+    if(window.XLSX) return Promise.resolve();
+    return new Promise((res,rej)=>{
+      const sc=document.createElement("script");
+      sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      sc.onload=res; sc.onerror=()=>rej(new Error("load"));
+      document.head.appendChild(sc);
+    });
+  }
+  const norm=k=>String(k).toLowerCase().replace(/[^a-z0-9]/g,"");
+  function getter(row){
+    const m={}; Object.keys(row).forEach(k=>m[norm(k)]=row[k]);
+    return (...keys)=>{ for(const k of keys){ const hit=Object.keys(m).find(x=>x.startsWith(k)); if(hit!==undefined){ const v=m[hit]; return typeof v==="string"?v.trim():v; } } return ""; };
+  }
+  function toDate(v){
+    if(v===""||v==null) return "";
+    if(typeof v==="number") return new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5).toISOString().slice(0,10);
+    if(v instanceof Date) return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");
+    const t=String(v).trim(); let m;
+    if(m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)) return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0");
+    if(m=t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/)){ const y=m[3].length===2?"20"+m[3]:m[3]; return y+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0"); }
+    const mon=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+    if(m=t.match(/^(\d{1,2})[\s\-]([a-z]{3})[a-z]*[\s\-](\d{4})$/i)){ const i=mon.indexOf(m[2].toLowerCase()); if(i>=0) return m[3]+"-"+String(i+1).padStart(2,"0")+"-"+m[1].padStart(2,"0"); }
+    return "invalid";
+  }
+  function isExample(v){ return String(v||"").trim().toUpperCase().startsWith("EXAMPLE"); }
+  function findSheet(wb,name){ const n=wb.SheetNames.find(x=>norm(x)===norm(name)); return n?wb.Sheets[n]:null; }
+  function numOrBlank(v){ if(v===""||v==null) return ""; const n=Number(String(v).replace(/[$,\s]/g,"")); return isNaN(n)?"":n; }
+
+  function buildPlan(wb){
+    const plan={newAcc:[],updAcc:[],newCust:[],skipped:[]};
+    const skip=(sheet,row,reason)=>plan.skipped.push({sheet,row,reason});
+    const accByEmail={}; accounts.forEach(a=>{ if(a.login) accByEmail[a.login.toLowerCase()]=a.id; });
+
+    const wsA=findSheet(wb,"Stock accounts");
+    if(wsA) XLSX.utils.sheet_to_json(wsA,{raw:true,defval:""}).forEach(r=>{
+      const g=getter(r), rowN=(r.__rowNum__||0)+1;
+      const service=String(g("service")||""), login=String(g("loginemail","login")||"");
+      if(!service && !login) return;
+      if(isExample(service)||isExample(login)) return;
+      if(!service||!login) return skip("Stock accounts",rowN,"Service and Login email are required");
+      const expiry=toDate(g("accountrenewson","renews","expiry"));
+      if(!expiry||expiry==="invalid") return skip("Stock accounts",rowN,"Missing or invalid 'Account renews on' date");
+      const data={service,login,password:String(g("password")||""),slots:Number(g("numberofslots","slots"))||5,expiry,
+        cost:numOrBlank(g("cost")),tempLink:String(g("temporarycodelink","temporary")||""),notes:String(g("notes")||"")};
+      const key=login.toLowerCase();
+      if(accByEmail[key] && !accByEmail[key].startsWith("NEW:")) plan.updAcc.push({id:accByEmail[key],data});
+      else if(accByEmail[key]) skip("Stock accounts",rowN,"Login email "+login+" appears twice in the file");
+      else { const id=newId("a_"); accByEmail[key]="NEW:"+id; plan.newAcc.push({id,data}); }
+    });
+    const accId=email=>{ const v=accByEmail[String(email).toLowerCase()]; return v?v.replace(/^NEW:/,""):null; };
+
+    const pinsUsed={};
+    customers.forEach(c=>{ if(c.accountId&&c.pin&&!c.stopped){ (pinsUsed[c.accountId]=pinsUsed[c.accountId]||new Set()).add(c.pin); } });
+    const existingKeys=new Set(customers.map(c=>String(c.phone||"").replace(/\D/g,"").replace(/^0+/,"")+"|"+String(c.service||"").toLowerCase()));
+
+    const wsC=findSheet(wb,"Customers");
+    if(wsC) XLSX.utils.sheet_to_json(wsC,{raw:true,defval:""}).forEach(r=>{
+      const g=getter(r), rowN=(r.__rowNum__||0)+1;
+      const name=String(g("name")||""), phone=String(g("whatsapp","phone")||""), service=String(g("service")||"");
+      if(!name && !phone && !service) return;
+      if(isExample(name)) return;
+      if(!name||!phone||!service) return skip("Customers",rowN,"Name, WhatsApp number and Service are required");
+      const key=phone.replace(/\D/g,"").replace(/^0+/,"")+"|"+service.toLowerCase();
+      if(existingKeys.has(key)) return skip("Customers",rowN,name+" ("+service+") is already in the tracker or twice in the file");
+      const start=toDate(g("startdate","start"));
+      if(!start||start==="invalid") return skip("Customers",rowN,name+": missing or invalid Start date");
+      const months=Number(g("duration","months"))||1;
+      let expiry=toDate(g("endson","ends","expiry"));
+      if(expiry==="invalid") return skip("Customers",rowN,name+": invalid 'Ends on' date");
+      if(!expiry) expiry=addMonths(start,months);
+      const email=String(g("stockaccountemail","stockaccount","accountemail")||"");
+      let accountId="";
+      if(email){ accountId=accId(email); if(!accountId) return skip("Customers",rowN,name+": stock account "+email+" not found"); }
+      let pin=g("passcode","pin"); pin=pin===""?"":String(pin).replace(/\D/g,"");
+      if(pin && pin.length<4) pin=pin.padStart(4,"0");
+      if(accountId && !pin) return skip("Customers",rowN,name+": passcode is required for a stock account customer");
+      if(pin && !/^[0-9]{4}$/.test(pin)) return skip("Customers",rowN,name+": passcode must be 4 digits");
+      if(accountId && pin){
+        const set=pinsUsed[accountId]=pinsUsed[accountId]||new Set();
+        if(set.has(pin)) return skip("Customers",rowN,name+": passcode "+pin+" is already used on "+email);
+        set.add(pin);
+      }
+      const price=numOrBlank(g("price"));
+      let payStatus=String(g("paymentstatus","status")||"");
+      payStatus=["paid","pending","partial"].includes(payStatus.toLowerCase())?payStatus[0].toUpperCase()+payStatus.slice(1).toLowerCase():"";
+      let amountPaid=numOrBlank(g("amountpaid"));
+      if(!payStatus) payStatus=amountPaid!==""&&amountPaid>0?"Paid":"Pending";
+      if(payStatus==="Paid" && amountPaid==="" && price!=="") amountPaid=price;
+      let datePaid=toDate(g("datepaid"));
+      if(datePaid==="invalid") return skip("Customers",rowN,name+": invalid 'Date paid'");
+      if(payStatus==="Paid" && !datePaid) datePaid=start;
+      let payMethod=String(g("paidvia","method")||"");
+      payMethod=["whish","omt","cash","other"].includes(payMethod.toLowerCase())?(payMethod.toLowerCase()==="omt"?"OMT":payMethod[0].toUpperCase()+payMethod.slice(1).toLowerCase()):"Whish";
+      existingKeys.add(key);
+      plan.newCust.push({id:newId("c_"),data:{name,phone,service,accountId,profile:String(g("profile")||""),pin,start,months,expiry,
+        price,payStatus,amountPaid,datePaid,payMethod,notes:String(g("notes")||""),createdAt:new Date().toISOString()}});
+    });
+    if(!wsA && !wsC) plan.error="This file has no 'Stock accounts' or 'Customers' sheet. Use the import template.";
+    return plan;
+  }
+
+  $("#btnImport").addEventListener("click",()=>$("#fileImport").click());
+  $("#fileImport").addEventListener("change",async e=>{
+    const f=e.target.files[0]; e.target.value=""; if(!f) return;
+    try{ await loadXLSX(); }catch(err){ alert("Couldn't load the Excel reader. Check your internet connection and try again."); return; }
+    let wb;
+    try{ wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); }catch(err){ alert("Couldn't read this file. Save it as .xlsx and try again."); return; }
+    importPlan=buildPlan(wb);
+    if(importPlan.error){ alert(importPlan.error); importPlan=null; return; }
+    const n=importPlan.newAcc.length+importPlan.updAcc.length+importPlan.newCust.length;
+    $("#impTotals").innerHTML='<div>New stock accounts<b>'+importPlan.newAcc.length+'</b></div><div>Updated accounts<b>'+importPlan.updAcc.length+'</b></div>'+
+      '<div>New customers<b>'+importPlan.newCust.length+'</b></div><div class="'+(importPlan.skipped.length?"neg":"")+'">Rows skipped<b>'+importPlan.skipped.length+'</b></div>';
+    $("#impSkipped").innerHTML=importPlan.skipped.length
+      ? '<p class="hint" style="margin:0 0 6px">These rows won\'t be imported. Fix them in Excel and import again later; rows already imported will be skipped automatically.</p>'+
+        importPlan.skipped.map(x=>'<div class="hist"><div>'+esc(x.reason)+'</div><div class="muted" style="color:var(--muted);white-space:nowrap">'+esc(x.sheet)+', row '+x.row+'</div></div>').join("")
+      : (n?'<p class="hint">All rows are ready to import.</p>':'<p class="hint">No rows found. Fill the yellow rows starting from row 3.</p>');
+    $("#btnDoImport").disabled=!n;
+    $("#dlgImport").showModal();
+  });
+  $("#dlgImport").addEventListener("close",()=>{
+    if($("#dlgImport").returnValue!=="import"||!importPlan) { importPlan=null; return; }
+    importPlan.newAcc.forEach(a=>accounts.push(Object.assign({id:a.id},a.data)));
+    importPlan.updAcc.forEach(u=>{ const i=accounts.findIndex(a=>a.id===u.id); if(i>=0) accounts[i]=Object.assign({},accounts[i],u.data); });
+    importPlan.newCust.forEach(c=>{
+      customers.push(Object.assign({id:c.id},c.data));
+      const d=c.data;
+      logTx({date:d.datePaid||d.start,kind:"New",customerId:c.id,customerName:d.name,service:d.service,months:d.months,
+        amount:num(d.amountPaid),payStatus:d.payStatus,method:d.payMethod,expiry:d.expiry});
+    });
+    importPlan=null;
+    persist(); render();
+  });
+
+  // ---------- customer history ----------
+  function openHistory(c){
+    const list=transactions.filter(t=>t.customerId===c.id).sort((a,b)=>(b.date+b.loggedAt).localeCompare(a.date+a.loggedAt));
+    const paid=list.reduce((s,t)=>s+num(t.amount),0);
+    $("#histTitle").textContent=c.name+" history";
+    $("#histTotals").innerHTML='<div>Total paid<b>'+usd(paid)+'</b></div><div>Renewals<b>'+list.filter(t=>t.kind==="Renewal").length+'</b></div><div>Customer since<b style="font-size:1.1rem">'+fmt(c.start)+'</b></div>';
+    $("#histList").innerHTML=list.length?list.map(t=>'<div class="hist"><div><b>'+esc(t.kind)+'</b>'+(t.months?' ('+t.months+' mo)':'')+
+      '<div class="muted" style="color:var(--muted);font-size:.9rem">'+fmt(t.date)+' · '+esc(t.service||"")+(t.method?' · '+esc(t.method):'')+(t.payStatus?' · '+esc(t.payStatus):'')+(t.expiry?' · until '+fmt(t.expiry):'')+'</div></div>'+
+      '<div class="'+(num(t.amount)<0?"amt-out":"amt-in")+'">'+usd(num(t.amount))+'</div></div>').join(""):'<div class="empty">No history yet.</div>';
+    $("#dlgHist").showModal();
+  }
+
+  // ---------- customer form ----------
+  const fc=$("#formCust");
+  function fillAccountSelect(service,selected){
+    const sel=fc.accountId;
+    const list=accounts.filter(a=>!service || (a.service||"").toLowerCase()===service.toLowerCase());
+    sel.innerHTML='<option value="">None</option>'+list.map(a=>'<option value="'+a.id+'"'+(a.id===selected?' selected':'')+'>'+esc(a.service+": "+a.login)+'</option>').join("");
+  }
+  function openCust(c){
+    editingCust=c?c.id:null;
+    $("#custTitle").textContent=c?"Edit customer":"Add customer";
+    fc.reset();
+    const v=c||{start:todayStr(),months:"1",payMethod:"Whish",payStatus:"Paid",datePaid:todayStr()};
+    fc.pin.setCustomValidity("");
+    ["name","phone","service","profile","pin","price","start","notes","payMethod","payStatus","amountPaid","datePaid"].forEach(k=>{ if(v[k]!=null) fc[k].value=v[k]; });
+    fc.months.value=String(v.months||1);
+    fc.expiry.value=v.expiry||addMonths(fc.start.value,Number(fc.months.value));
+    fillAccountSelect(fc.service.value,v.accountId);
+    $("#dlgCust").showModal();
+  }
+  function usedPins(accountId){
+    return customers.filter(c=>c.id!==editingCust && accountId && c.accountId===accountId && !c.stopped && c.pin).map(c=>c.pin);
+  }
+  function pinError(){
+    const pin=fc.pin.value.trim(), acc=fc.accountId.value;
+    if(acc && !pin) return "Enter this user's 4-digit passcode.";
+    if(pin && !/^[0-9]{4}$/.test(pin)) return "The passcode must be exactly 4 digits.";
+    if(pin && usedPins(acc).includes(pin)){
+      const other=customers.find(c=>c.id!==editingCust && c.accountId===acc && c.pin===pin && !c.stopped);
+      return "Passcode "+pin+" is already used by "+(other?other.name:"another user")+" on this account.";
+    }
+    return "";
+  }
+  $("#btnPin").addEventListener("click",()=>{
+    const used=usedPins(fc.accountId.value); let p, tries=0;
+    do{ p=String(Math.floor(Math.random()*10000)).padStart(4,"0"); tries++; }while(used.includes(p)&&tries<500);
+    fc.pin.value=p; fc.pin.setCustomValidity("");
+  });
+  fc.pin.addEventListener("input",()=>fc.pin.setCustomValidity(""));
+  fc.accountId.addEventListener("change",()=>fc.pin.setCustomValidity(""));
+  fc.addEventListener("submit",e=>{
+    if(!e.submitter || e.submitter.value!=="save") return;
+    const err=pinError();
+    if(err){ e.preventDefault(); fc.pin.setCustomValidity(err); fc.pin.reportValidity(); }
+  });
+  function autoExpiry(){ if(fc.start.value) fc.expiry.value=addMonths(fc.start.value,Number(fc.months.value)); }
+  fc.start.addEventListener("change",autoExpiry);
+  fc.months.addEventListener("change",autoExpiry);
+  fc.service.addEventListener("change",()=>fillAccountSelect(fc.service.value,fc.accountId.value));
+  $("#dlgCust").addEventListener("close",async()=>{
+    if($("#dlgCust").returnValue!=="save") return;
+    const old=customers.find(c=>c.id===editingCust)||{};
+    const data=Object.assign(strip(old),{
+      name:fc.name.value.trim(), phone:fc.phone.value.trim(), service:fc.service.value.trim(),
+      accountId:fc.accountId.value, profile:fc.profile.value.trim(), price:fc.price.value===""?"":Number(fc.price.value),
+      start:fc.start.value, months:Number(fc.months.value), expiry:fc.expiry.value, payMethod:fc.payMethod.value, notes:fc.notes.value.trim(),
+      pin:fc.pin.value.trim(), payStatus:fc.payStatus.value,
+      amountPaid:fc.amountPaid.value===""?"":Number(fc.amountPaid.value), datePaid:fc.datePaid.value
+    });
+    if(data.payStatus==="Paid" && data.amountPaid==="" && data.price!=="") data.amountPaid=data.price;
+    if(data.payStatus==="Paid" && !data.datePaid) data.datePaid=todayStr();
+    if(old.expiry && old.expiry!==data.expiry) data.remindedFor="";
+    if(!data.createdAt) data.createdAt=new Date().toISOString();
+    const id=editingCust||newId("c_");
+    const base={customerId:id,customerName:data.name,service:data.service,method:data.payMethod,payStatus:data.payStatus,expiry:data.expiry};
+    if(!editingCust){
+      logTx(Object.assign({date:data.datePaid||data.start||todayStr(),kind:"New",months:data.months,amount:num(data.amountPaid)},base));
+    } else {
+      const diff=num(data.amountPaid)-num(old.amountPaid);
+      if(diff!==0 || old.payStatus!==data.payStatus){
+        logTx(Object.assign({date:data.datePaid||todayStr(),kind:diff<0?"Correction":"Payment",amount:diff},base));
+      }
+    }
+    await put("customers",id,data);
+  });
+
+  // ---------- account form ----------
+  const fa=$("#formAcc");
+  function openAcc(a){
+    editingAcc=a?a.id:null;
+    $("#accTitle").textContent=a?"Edit stock account":"Add stock account";
+    fa.reset();
+    if(a) ["service","login","password","slots","expiry","cost","notes","tempLink"].forEach(k=>{ if(a[k]!=null) fa[k].value=a[k]; });
+    else fa.expiry.value=addMonths(todayStr(),1);
+    $("#dlgAcc").showModal();
+  }
+  $("#dlgAcc").addEventListener("close",async()=>{
+    if($("#dlgAcc").returnValue!=="save") return;
+    const old=accounts.find(a=>a.id===editingAcc)||{};
+    const data=Object.assign(strip(old),{
+      service:fa.service.value.trim(), login:fa.login.value.trim(), slots:Number(fa.slots.value)||1,
+      expiry:fa.expiry.value, cost:fa.cost.value===""?"":Number(fa.cost.value), notes:fa.notes.value.trim(), tempLink:fa.tempLink.value.trim(), password:fa.password.value
+    });
+    await put("accounts",editingAcc||newId("a_"),data);
+  });
+
+  // ---------- renew ----------
+  const fr=$("#formRenew");
+  function renewBase(c){ return daysLeft(c.expiry)<0?todayStr():c.expiry; }
+  function openRenew(c){
+    renewing=c.id;
+    $("#renewTitle").textContent="Renew "+c.name;
+    fr.reset();
+    fr.months.value=String(c.months||1);
+    fr.expiry.value=addMonths(renewBase(c),Number(fr.months.value));
+    fr.payStatus.value="Paid";
+    fr.amountPaid.value=c.price===""||c.price==null?"":c.price;
+    fr.datePaid.value=todayStr();
+    fr.payMethod.value=c.payMethod||"Whish";
+    $("#dlgRenew").showModal();
+  }
+  fr.months.addEventListener("change",()=>{ const c=customers.find(x=>x.id===renewing); if(c) fr.expiry.value=addMonths(renewBase(c),Number(fr.months.value)); });
+  $("#dlgRenew").addEventListener("close",()=>{
+    if($("#dlgRenew").returnValue!=="save") return;
+    const c=customers.find(x=>x.id===renewing); if(!c) return;
+    logTx({date:fr.datePaid.value||todayStr(),kind:"Renewal",customerId:c.id,customerName:c.name,service:c.service,
+      months:Number(fr.months.value),amount:num(fr.amountPaid.value),payStatus:fr.payStatus.value,method:fr.payMethod.value,expiry:fr.expiry.value});
+    put("customers",c.id,Object.assign(strip(c),{
+      months:Number(fr.months.value), expiry:fr.expiry.value, stopped:false, remindedFor:"", lastRenewed:todayStr(),
+      payStatus:fr.payStatus.value, amountPaid:fr.amountPaid.value===""?"":Number(fr.amountPaid.value),
+      datePaid:fr.datePaid.value, payMethod:fr.payMethod.value
+    }));
+  });
+
+  // ---------- settings ----------
+  $("#btnSettings").addEventListener("click",()=>{ $("#formSet").template.value=settings.template||DEFAULT_TEMPLATE; $("#formSet").codeTemplate.value=settings.codeTemplate||DEFAULT_CODE; $("#formSet").loginTemplate.value=settings.loginTemplate||DEFAULT_LOGIN; $("#dlgSet").showModal(); });
+  $("#dlgSet").addEventListener("close",async()=>{
+    if($("#dlgSet").returnValue!=="save") return;
+    settings={template:$("#formSet").template.value.trim()||DEFAULT_TEMPLATE, codeTemplate:$("#formSet").codeTemplate.value.trim()||DEFAULT_CODE, loginTemplate:$("#formSet").loginTemplate.value.trim()||DEFAULT_LOGIN};
+    persist(); render();
+  });
+
+  // ---------- actions ----------
+  document.addEventListener("click",async e=>{
+    const t=e.target.closest("[data-remind],[data-renew],[data-stop],[data-edit],[data-del],[data-accrenew],[data-accedit],[data-accdel],[data-history],[data-txdel],[data-range],.tab");
+    if(!t) return;
+    if(t.classList.contains("tab")){
+      document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b===t?"true":"false"));
+      $("#paneCustomers").hidden=t.dataset.tab!=="customers";
+      $("#paneAccounts").hidden=t.dataset.tab!=="accounts";
+      $("#paneTx").hidden=t.dataset.tab!=="tx";
+      $("#paneMonthly").hidden=t.dataset.tab!=="monthly";
+      return;
+    }
+    if(t.dataset.range){ setRange(t.dataset.range); return; }
+    if(t.dataset.history){ openHistory(customers.find(x=>x.id===t.dataset.history)); return; }
+    if(t.dataset.txdel){
+      const tx=transactions.find(x=>x.id===t.dataset.txdel);
+      if(tx && confirm("Delete this "+usd(num(tx.amount))+" transaction for "+(tx.customerName||"")+"?")){
+        transactions=transactions.filter(x=>x.id!==tx.id); persist(); render();
+      }
+      return;
+    }
+    if(t.dataset.remind){
+      const c=customers.find(x=>x.id===t.dataset.remind);
+      if(c && c.remindedFor!==c.expiry) put("customers",c.id,Object.assign(strip(c),{remindedFor:c.expiry}));
+      return;
+    }
+    if(t.dataset.renew){
+      const c=customers.find(x=>x.id===t.dataset.renew); if(!c) return;
+      openRenew(c);
+      return;
+    }
+    if(t.dataset.stop){
+      const c=customers.find(x=>x.id===t.dataset.stop);
+      if(c) put("customers",c.id,Object.assign(strip(c),{stopped:true}));
+      return;
+    }
+    if(t.dataset.edit){ openCust(customers.find(x=>x.id===t.dataset.edit)); return; }
+    if(t.dataset.del){
+      const c=customers.find(x=>x.id===t.dataset.del);
+      if(c && confirm("Delete "+c.name+"? This can't be undone.")) del("customers",c.id);
+      return;
+    }
+    if(t.dataset.accrenew){
+      const a=accounts.find(x=>x.id===t.dataset.accrenew); if(!a) return;
+      const base=daysLeft(a.expiry)<0?todayStr():a.expiry;
+      const cost=prompt("How much did you pay for the "+a.service+" account ("+a.login+")? ($)", a.cost===""||a.cost==null?"":a.cost);
+      if(cost===null) return;
+      logTx({kind:"Stock account",accountId:a.id,customerName:a.login,service:a.service,amount:-Math.abs(num(cost)),method:"",payStatus:"Paid",expiry:addMonths(base,1)});
+      put("accounts",a.id,Object.assign(strip(a),{expiry:addMonths(base,1)}));
+      return;
+    }
+    if(t.dataset.accedit){ openAcc(accounts.find(x=>x.id===t.dataset.accedit)); return; }
+    if(t.dataset.accdel){
+      const a=accounts.find(x=>x.id===t.dataset.accdel);
+      if(a && confirm("Delete the "+a.service+" account "+a.login+"?")) del("accounts",a.id);
+    }
+  });
+
+  $("#btnAddCust").addEventListener("click",()=>openCust(null));
+  $("#btnAddAcc").addEventListener("click",()=>openAcc(null));
+  ["#q","#fService","#fStatus"].forEach(s=>$(s).addEventListener("input",renderCustomers));
+
+  // ---------- export ----------
+  function saveFile(name,text,type){
+    const url=URL.createObjectURL(new Blob([text],{type}));
+    const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },500);
+  }
+  $("#btnExport").addEventListener("click",()=>{
+    const cols=["name","phone","service","profile","pin","start","months","expiry","price","payStatus","amountPaid","datePaid","payMethod","notes"];
+    const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const csv=[cols.concat("status").join(",")].concat(customers.map(c=>cols.map(k=>q(c[k])).concat(q(status(c))).join(","))).join("\n");
+    saveFile("customers-"+todayStr()+".csv","\ufeff"+csv,"text/csv");
+  });
+  $("#btnBackup").addEventListener("click",()=>{
+    saveFile("renewals-backup-"+todayStr()+".json",JSON.stringify({customers,accounts,settings,transactions},null,2),"application/json");
+  });
+  $("#btnRestore").addEventListener("click",()=>$("#fileRestore").click());
+  $("#fileRestore").addEventListener("change",e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const d=JSON.parse(r.result);
+        if(!Array.isArray(d.customers)) throw 0;
+        if(!confirm("Replace everything here with this backup ("+d.customers.length+" customers)?")) return;
+        customers=d.customers; accounts=d.accounts||[]; transactions=d.transactions||[]; settings=Object.assign({},DEFAULTS,d.settings||{});
+        migrate(); persist(); render();
+      }catch(err){ alert("That file isn't a tracker backup."); }
+      e.target.value="";
+    };
+    r.readAsText(f);
+  });
+
+  // Refresh alerts at midnight and when the tab comes back into view
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) render(); });
+  setInterval(render,60*60*1000);
+
+  // ---------- boot ----------
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
