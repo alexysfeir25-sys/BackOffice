@@ -1,10 +1,27 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Renewals Tracker</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cell Home Renewals</title>
+<meta name="theme-color" content="#3532A8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cell Home">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <style>
 :root{
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
   --bg:#FFFFFF; --side:#F6F7FB; --surface:#FFFFFF; --ink:#1F2233; --muted:#6B7085; --line:#E3E5EE; --row:#F4F5FB;
   --brand:#3532A8; --brand-ink:#FFFFFF; --brand-soft:#B6B9F1; --brand-tint:#ECEDFC;
   --due:#C2185B; --due-soft:#FCE4EE; --soon:#B7791F; --soon-soft:#FDF3DC;
@@ -30,6 +47,7 @@
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
 button,input,select,textarea{font:inherit;color:inherit}
 
@@ -62,6 +80,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sync.off::before{background:var(--due)}
 .side-link{display:flex;gap:10px;align-items:center;border:none;background:none;color:var(--brand);font-weight:500;cursor:pointer;padding:8px 10px;border-radius:6px}
 .side-link svg{width:20px;height:20px}
+.tab span{white-space:nowrap}
+.nav-badge{margin-left:auto;background:var(--due);color:#fff;font-size:.75rem;font-weight:700;border-radius:999px;padding:1px 8px;line-height:1.5}
+.debt-row{grid-template-columns:1.2fr 1fr .9fr .9fr 300px}
+.owed{font-weight:700;color:var(--due);font-variant-numeric:tabular-nums}
+.owed.unknown{color:var(--muted);font-weight:500}
 .side-link:hover{background:var(--brand-tint)}
 .main{padding:18px 24px 64px;min-width:0}
 .top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
@@ -126,6 +149,12 @@ h1{font:500 1.6rem/1.2 var(--display);margin:0}
 .copy:hover{color:var(--brand);background:var(--brand-tint)}
 .copy svg{width:16px;height:16px}
 .copy.done{color:var(--ok)}
+.pw-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.pw-item{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.pw-item.sent{opacity:.6}
+.pw-item .muted{font-size:.82rem}
+.pw-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.pw-row label{flex:1;min-width:0}
 .members{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding-top:2px}
 .member{font-size:.82rem;background:var(--brand-tint);color:var(--ink);border:1px solid transparent;border-radius:6px;padding:3px 9px;cursor:pointer}
 .member:hover{border-color:var(--brand)}
@@ -148,6 +177,21 @@ h1{font:500 1.6rem/1.2 var(--display);margin:0}
 .amt-out{color:var(--due);font-weight:500}
 .hist{border-top:1px solid var(--line);padding:10px 0;display:flex;justify-content:space-between;gap:12px}
 .hist:first-child{border-top:none}
+
+/* Sign-in */
+.signin{min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--side)}
+.signin-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px 24px;width:min(400px,100%);display:flex;flex-direction:column;gap:14px}
+.signin-card .avatar{margin:0 auto;background:var(--brand-soft);color:var(--ink)}
+.signin-card h1{text-align:center;font-size:1.4rem}
+.signin-card p{margin:0;color:var(--muted);text-align:center;font-size:.92rem}
+.signin-card .btn{justify-content:center;padding:11px 14px}
+.signin-card form{display:flex;flex-direction:column;gap:10px}
+.signin-card input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;color:var(--ink)}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.signin-err{color:var(--due);font-size:.9rem;text-align:center;min-height:1.2em;margin:0}
+.signin-row{display:flex;gap:8px}
+.signin-row .btn{flex:1}
 
 /* Dialogs */
 dialog{border:none;border-radius:10px;padding:0;background:var(--surface);color:var(--ink);width:min(560px,94vw);max-height:90vh}
@@ -178,7 +222,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
 }
 @media (max-width:760px){
   .row.head{display:none}
-  .row,.acc-row,.tx-row,.m-row{grid-template-columns:1fr 1fr;gap:6px 12px}
+  .row,.acc-row,.tx-row,.m-row,.debt-row{grid-template-columns:1fr 1fr;gap:6px 12px}
   .row .cell-actions{grid-column:1/-1;justify-content:flex-start}
   .due-row{grid-template-columns:64px 1fr}
   .due-row .actions{grid-column:1/-1}
@@ -190,7 +234,28 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   @keyframes pulse{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--due) 40%,transparent)}to{box-shadow:0 0 0 12px transparent}}
 }
 </style>
-<div class="app">
+</head>
+<body>
+<div class="signin" id="signin" hidden>
+  <div class="signin-card">
+    <div class="avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4 0-8 2-8 5v2h16v-2c0-3-4-5-8-5Z"/></svg></div>
+    <h1>Cell Home</h1>
+    <p>Sign in to see your customers. Use the same sign-in on your phone and laptop so they share the same data.</p>
+    <button class="btn primary" id="btnGoogle" type="button">Continue with Google</button>
+    <div class="or">or with email</div>
+    <form id="formLogin">
+      <input id="loginEmail" name="email" type="email" autocomplete="username" placeholder="Email" required aria-label="Email">
+      <input id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="Password" required minlength="6" aria-label="Password">
+      <div class="signin-row">
+        <button class="btn" type="submit" value="in">Sign in</button>
+        <button class="btn" type="button" id="btnCreate">Create account</button>
+      </div>
+    </form>
+    <p class="signin-err" id="signinErr" role="alert"></p>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
 <aside class="side">
   <div class="brand">
     <button class="balance unset" id="btnBalance" type="button" title="Your balance">Set balance</button>
@@ -204,12 +269,14 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   <nav class="nav" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" aria-selected="true" data-tab="customers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.5 2.5 3.5 5.2"/></svg>Customers</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="accounts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>Stock accounts</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="debts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6H18v3"/><rect x="4" y="9" width="16" height="10" rx="1.5"/><circle cx="16" cy="14" r="1.2" fill="currentColor"/></svg><span>Pending payments</span><span class="nav-badge" id="debtBadge" hidden></span></button>
     <button class="tab" role="tab" aria-selected="false" data-tab="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 3h14v18l-2.3-1.5L14.3 21 12 19.5 9.7 21l-2.4-1.5L5 21Z"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Transactions</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="monthly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6"/><rect x="10.5" y="7" width="3" height="10"/><rect x="15.5" y="4" width="3" height="13"/></svg>Monthly revenue</button>
   </nav>
   <div class="side-foot">
     <button class="side-link" id="btnSettings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v11H9l-5 4Z"/><path d="M8 9h8M8 12h5"/></svg>Message templates</button>
     <button class="side-link" id="btnTheme" type="button"></button>
+    <button class="side-link" id="btnSignOut" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15"/><path d="M10 8l-4 4 4 4M6 12h10"/></svg>Sign out</button>
   </div>
 </aside>
 <main class="main">
@@ -256,7 +323,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   </div>
 
   <div id="paneAccounts" hidden>
-    <p class="hint" style="margin:0 0 12px">Passwords stay on this device only and are not synced. Add them once on each phone or laptop with Edit, or with Import Excel.</p>
+    <p class="hint" style="margin:0 0 12px">Passwords sync to your devices and only your sign-in can read them. Anyone holding your unlocked phone or laptop can see them.</p>
     <div class="list" id="accList"></div>
   </div>
 
@@ -273,6 +340,11 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     </div>
     <div class="totals" id="txTotals"></div>
     <div class="list" id="txList"></div>
+  </div>
+
+  <div id="paneDebts" hidden>
+    <div class="totals" id="debtTotals"></div>
+    <div class="list" id="debtList"></div>
   </div>
 
   <div id="paneMonthly" hidden>
@@ -327,6 +399,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
       <option value="6">6 months</option><option value="12">12 months</option>
     </select></label>
     <label>New end date<input name="expiry" type="date" required></label>
+    <label class="full">Price ($)<input name="price" type="number" min="0" step="0.5"><span class="hint">If they pay later, choose Pending and this is what they owe.</span></label>
     <label>Payment status<select name="payStatus">
       <option>Paid</option><option>Pending</option><option>Partial</option>
     </select></label>
@@ -354,7 +427,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     <label>Notes<input name="notes"></label>
     <label class="full">Temporary code link<input name="tempLink" type="url" placeholder="https://..."><span class="hint">Sent to customers when Netflix asks for a temporary code.</span></label>
   </div>
-  <p class="hint">Everything syncs to your other devices except the password, which stays on this device.</p>
+  <p class="hint">Saved online and synced to all your devices.</p>
   <div class="actions">
     <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
     <button class="btn primary" value="save" type="submit">Save account</button>
@@ -388,11 +461,47 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   </div>
 </form></dialog>
 
+<dialog id="dlgPay"><form class="dlg" method="dialog" id="formPay">
+  <h3 id="payTitle">Got paid</h3>
+  <div class="grid">
+    <label class="full">Amount received ($)<input name="amount" type="number" min="0" step="0.01" required></label>
+    <label>Date<input name="date" type="date" required></label>
+    <label>Paid via<select name="method">
+      <option>Whish</option><option>OMT</option><option>Cash</option><option>Other</option>
+    </select></label>
+    <div class="full bal-after" id="payInfo"></div>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit">Cancel</button>
+    <button class="btn primary" value="save" type="submit">Save payment</button>
+  </div>
+</form></dialog>
+
 <dialog id="dlgAsk"><form class="dlg" method="dialog">
   <p id="askText"></p>
   <div class="actions">
     <button class="btn ghost" value="cancel" type="submit" id="askCancel">Cancel</button>
     <button class="btn primary" value="ok" type="submit" id="askOk">OK</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgPass"><form class="dlg" method="dialog" id="formPass">
+  <h3 id="passTitle">New password</h3>
+  <div id="passStep1">
+    <p class="hint" style="margin:0 0 12px">First change the password on the streaming site yourself. Then type the same new password here, and the tracker prepares a WhatsApp message for every customer on this account.</p>
+    <div class="pw-row">
+      <label>New password<input name="newpass" id="newPass" autocomplete="off"></label>
+      <button class="btn small" type="button" id="btnSuggestPass">Suggest one</button>
+    </div>
+    <p class="hint" id="passErr" style="color:var(--due,#b3261e)" hidden>Type the new password first (at least 6 characters).</p>
+  </div>
+  <div id="passStep2" hidden>
+    <p class="hint" style="margin:0 0 8px" id="passDone"></p>
+    <div class="pw-list" id="passList"></div>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" value="cancel" formnovalidate type="submit" id="passClose">Cancel</button>
+    <button class="btn primary" type="button" id="passSave">Save and prepare messages</button>
   </div>
 </form></dialog>
 
@@ -417,6 +526,8 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   <h3>Reminder message</h3>
   <label>WhatsApp message<textarea name="template" rows="5"></textarea>
   <span class="hint">Use {name}, {service}, {date} and {price}. They're filled in for each customer.</span></label>
+  <label style="margin-top:14px">Payment reminder<textarea name="payTemplate" rows="4"></textarea>
+  <span class="hint">Sent to customers who still owe you. Use {name}, {service} and {amount}.</span></label>
   <label style="margin-top:14px">Login details<textarea name="loginTemplate" rows="8"></textarea>
   <span class="hint">Use {name}, {service}, {email}, {password}, {profile} and {pin}.</span></label>
   <label style="margin-top:14px">Temporary code steps<textarea name="codeTemplate" rows="7"></textarea>
@@ -428,7 +539,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
 </form></dialog>
 
 <datalist id="serviceList">
-  <option value="Netflix"><option value="Shahid VIP"><option value="Anghami Plus"><option value="OSN+">
+  <option value="Netflix"><option value="Shahid VIP"><option value="Prime Video"><option value="Anghami Plus"><option value="OSN+">
   <option value="StarzPlay"><option value="YouTube Premium"><option value="Spotify"><option value="TOD">
 </datalist>
 
@@ -438,7 +549,8 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   
   const DEFAULT_CODE = "Hi {name}, if Netflix asks for a temporary code, follow these steps:\n\nStep 1: Click on \"Update Netflix Household\"\nStep 2: Click \"Send email\"\nStep 3: Open this link: {link}\nStep 4: The code will appear after 1 minute. Enter it on Netflix.";
   const DEFAULT_LOGIN = "Hi {name}, here are your {service} login details:\n\nEmail: {email}\nPassword: {password}\nProfile: {profile}\nProfile passcode: {pin}\n\nPlease use your own profile only and don't change the password or passcode. Enjoy!";
-  const DEFAULTS = { template: DEFAULT_TEMPLATE, codeTemplate: DEFAULT_CODE, loginTemplate: DEFAULT_LOGIN };
+  const DEFAULT_PAY = "Hi {name}, a friendly reminder that {amount} is still pending for your {service} subscription. You can send it via Whish or OMT and reply here with the screenshot. Thank you!";
+  const DEFAULTS = { template: DEFAULT_TEMPLATE, codeTemplate: DEFAULT_CODE, loginTemplate: DEFAULT_LOGIN, payTemplate: DEFAULT_PAY };
   let customers = [], accounts = [], transactions = [], settings = Object.assign({}, DEFAULTS);
   let renewing = null, balance = null, payingAcc = null;
   let editingCust = null, editingAcc = null;
@@ -486,6 +598,18 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
   }
   function accOf(c){ return accounts.find(a=>a.id===c.accountId); }
+  // What a customer still owes: null when no price is set
+  function owedOf(c){
+    if(!unpaid(c)||c.stopped) return 0;
+    if(c.price===""||c.price==null) return null;
+    return Math.max(0,Math.round((num(c.price)-num(c.amountPaid))*100)/100);
+  }
+  function payLink(c){
+    const o=owedOf(c);
+    const msg=(settings.payTemplate||DEFAULT_PAY).replaceAll("{name}",c.name||"").replaceAll("{service}",c.service||"")
+      .replaceAll("{amount}",o?usd(o):"the payment");
+    return "https://wa.me/"+waNumber(c.phone)+"?text="+encodeURIComponent(msg);
+  }
   function codeLink(c){
     const a=accOf(c);
     const msg=(settings.codeTemplate||DEFAULT_CODE).replaceAll("{name}",c.name||"").replaceAll("{link}",(a&&a.tempLink)||"");
@@ -523,11 +647,11 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     return "https://calendar.google.com/calendar/render?"+p.toString();
   }
 
-  // ---------- storage + sync ----------
-  // Everything syncs through this page's database, except account passwords,
-  // which stay in this browser only (one per device).
-  const KEY="renewals-tracker-v1", PWKEY="renewals-pw-v1", COLS=["customers","accounts","transactions"];
-  let DB=null, ready=false, cached=null, writeBlocked=false;
+  // ---------- storage + sync (Firebase) ----------
+  // Each signed-in person's data lives under users/<their email>, and the
+  // Firestore rules only let that person read or write it.
+  const COLS=["customers","accounts","transactions"];
+  let FS=null, AUTH=null, ROOT=null, ready=false, writeBlocked=false, unsubs=[];
   const loaded=new Set(), synced={customers:new Map(),accounts:new Map(),transactions:new Map()};
   let metaSynced=null;
   const queue=new Map(), inflight=new Set();
@@ -536,23 +660,19 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   function stable(o){ if(Array.isArray(o)) return "["+o.map(stable).join(",")+"]"; if(o&&typeof o==="object") return "{"+Object.keys(o).filter(k=>o[k]!==undefined).sort().map(k=>JSON.stringify(k)+":"+stable(o[k])).join(",")+"}"; return JSON.stringify(o===undefined?null:o); }
   function arrOf(col){ return col==="customers"?customers:col==="accounts"?accounts:transactions; }
   function setArr(col,v){ if(col==="customers") customers=v; else if(col==="accounts") accounts=v; else transactions=v; }
-  function docBody(col,o){ const c=JSON.parse(JSON.stringify(o)); delete c.id; if(col==="accounts") delete c.password; return c; }
-  function pwMap(){ try{ return JSON.parse(lsGet(PWKEY)||"{}"); }catch(e){ return {}; } }
+  function docBody(col,o){ const c=JSON.parse(JSON.stringify(o)); delete c.id; return c; }
   function isPending(path){ return queue.has(path)||inflight.has(path); }
   function showBanner(t){ const b=$("#banner"); b.textContent=t||""; b.style.display=t?"block":"none"; }
   function setSync(){
     const el=$("#syncState");
-    if(!DB){ el.className="sync off"; el.textContent=ready?"Saved on this device only":"Connecting…"; if(!ready) el.className="sync busy"; return; }
     if(!ready){ el.className="sync busy"; el.textContent="Connecting…"; return; }
     if(writeBlocked){ el.className="sync off"; el.textContent="Not saving"; return; }
     const busy=queue.size+inflight.size;
-    el.className="sync"+(busy?" busy":""); el.textContent=busy?"Saving "+busy+"…":"Synced";
+    if(busy){ el.className="sync busy"; el.textContent=navigator.onLine===false?"Offline, "+busy+" waiting":"Saving "+busy+"…"; }
+    else { el.className="sync"; el.textContent="Synced"; }
   }
   function persist(){
-    const pw={}; accounts.forEach(a=>{ if(a.password) pw[a.id]=a.password; });
-    lsSet(PWKEY,JSON.stringify(pw));
-    lsSet(KEY,JSON.stringify({customers,accounts,settings,transactions,balance}));
-    if(!DB||!ready) return;
+    if(!FS||!ready) return;
     COLS.forEach(col=>{
       const seen=new Set();
       arrOf(col).forEach(o=>{
@@ -568,24 +688,24 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   }
   function enqueue(path,op,data){ queue.set(path,{op,data}); pump(); }
   function pump(){
-    while(inflight.size<4){
+    while(inflight.size<6){
       const path=[...queue.keys()].find(p=>!inflight.has(p));
       if(!path) break;
       const job=queue.get(path); queue.delete(path); inflight.add(path);
+      const root=ROOT;
       (async()=>{
         try{
-          const ref=DB.doc(path);
+          const ref=FS.doc(root+"/"+path);
           if(job.op==="del") await ref.delete(); else await ref.set(job.data);
         }catch(e){
           const code=e&&e.code;
-          if(code==="unavailable"||code==="resource_exhausted"){
-            setTimeout(()=>{ if(!queue.has(path)){ queue.set(path,job); pump(); } },1000+Math.random()*2000);
-          } else if(code==="quota_exceeded"){
-            showBanner("Online storage is full, so this change wasn't saved. Delete old transactions to make room.");
-          } else if(code==="invalid_argument"||code==="not_granted"||code==="revoked"){
-            writeBlocked=true; showBanner("You can view this tracker but changes can't be saved from this account.");
+          if(root!==ROOT){ /* signed out meanwhile */ }
+          else if(code==="permission-denied"){
+            writeBlocked=true; showBanner("This account isn't allowed to save. Sign out and sign in with the account you set up in Firebase.");
+          } else if(code==="invalid-argument"){
+            showBanner("A change couldn't be saved because it's too large.");
           } else {
-            showBanner("A change couldn't be saved online. Reload the page and try again.");
+            setTimeout(()=>{ if(root===ROOT&&!queue.has(path)){ queue.set(path,job); pump(); } },1500+Math.random()*2500);
           }
         }finally{
           inflight.delete(path); setSync(); pump();
@@ -598,13 +718,11 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   function scheduleRender(){ if(renderQueued) return; renderQueued=true; requestAnimationFrame(()=>{ renderQueued=false; render(); }); }
   function onColSnap(col,snap){
     const local=arrOf(col), byId=new Map(local.map(x=>[x.id,x])), seen=new Set(), next=[];
-    const pw=col==="accounts"?pwMap():null;
     snap.docs.forEach(d=>{
       seen.add(d.id);
       const path=col+"/"+d.id;
       if(isPending(path)){ if(byId.has(d.id)) next.push(byId.get(d.id)); return; }
       const o=Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data()||{})));
-      if(pw) o.password=pw[d.id]||(byId.get(d.id)||{}).password||"";
       next.push(o);
       synced[col].set(d.id,stable(docBody(col,o)));
     });
@@ -622,40 +740,85 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     loaded.add("meta"); afterSnap();
   }
   function afterSnap(){
+    if(ready && (customers.length||accounts.length) && /is empty/.test($("#banner").textContent)) showBanner("");
     if(!ready && loaded.size===4){
       ready=true;
-      const empty=!customers.length&&!accounts.length&&!transactions.length;
-      if(empty && cached && (cached.customers||[]).length){
-        // First time online: upload what this device already had
-        customers=cached.customers||[]; accounts=cached.accounts||[]; transactions=cached.transactions||[];
-        settings=Object.assign({},DEFAULTS,cached.settings||{}); balance=cached.balance||null;
-      }
       migrate(); persist(); setSync();
+      if(!customers.length&&!accounts.length) showBanner("Your tracker is empty. Use Restore backup (Customers page) to load your customers, or add them one by one.");
     }
     if(ready) scheduleRender();
   }
   function snapErr(e){
-    if(e&&e.code==="revoked"){ showBanner("This page lost access to its saved data. Reload to reconnect."); }
-    else { showBanner("Live updates stopped. Reload the page to reconnect."); }
+    if(e&&e.code==="permission-denied") showBanner("This account can't open the tracker data. Sign out and sign in with the account you set up in Firebase.");
+    else showBanner("Live updates stopped. Reload the page to reconnect.");
     const el=$("#syncState"); el.className="sync off"; el.textContent="Offline";
   }
-  function load(){
-    try{
-      const raw=lsGet(KEY);
-      if(raw){ cached=JSON.parse(raw); const d=cached; customers=d.customers||[]; accounts=d.accounts||[]; transactions=d.transactions||[]; settings=Object.assign({},DEFAULTS,d.settings||{}); balance=d.balance||null; }
-    }catch(e){}
+  function load(){}
+  function connect(email){
+    ROOT="users/"+email.toLowerCase();
+    ready=false; writeBlocked=false; loaded.clear(); queue.clear();
+    COLS.forEach(c=>synced[c].clear()); metaSynced=null;
+    customers=[]; accounts=[]; transactions=[]; settings=Object.assign({},DEFAULTS); balance=null;
+    showBanner(""); render(); setSync();
+    COLS.forEach(col=>unsubs.push(FS.collection(ROOT+"/"+col).onSnapshot(snap=>onColSnap(col,snap),snapErr)));
+    unsubs.push(FS.doc(ROOT+"/meta/app").onSnapshot(onMetaSnap,snapErr));
   }
-  async function connect(){
-    const c=window.claude;
-    const db=c&&typeof c.use==="function"?await c.use("db").catch(()=>null):null;
-    if(!db){
-      ready=true; migrate(); persist(); setSync();
-      showBanner("Online sync isn't available here, so changes are saved on this device only. Open the tracker from claude.ai while signed in to sync.");
-      render(); return;
+  function disconnect(){ unsubs.forEach(u=>{ try{ u(); }catch(e){} }); unsubs=[]; ROOT=null; ready=false; }
+
+  // ---------- sign-in ----------
+  function signinError(e){
+    const m={"auth/invalid-credential":"Wrong email or password.","auth/wrong-password":"Wrong email or password.","auth/user-not-found":"No account with this email yet. Tap Create account.",
+      "auth/email-already-in-use":"This email already has an account. Tap Sign in.","auth/weak-password":"Use a password of at least 6 characters.",
+      "auth/invalid-email":"That email doesn't look right.","auth/network-request-failed":"No internet connection. Try again when you're online.",
+      "auth/unauthorized-domain":"This website isn't allowed in Firebase yet. Add it under Authentication, Settings, Authorized domains.",
+      "auth/popup-closed-by-user":"","auth/cancelled-popup-request":""};
+    const t=e&&e.code in m?m[e.code]:"Sign-in didn't work ("+((e&&e.code)||"unknown error")+").";
+    $("#signinErr").textContent=t;
+  }
+  function startAuth(){
+    if(!window.firebase||!window.FIREBASE_CONFIG||!window.FIREBASE_CONFIG.apiKey||/PASTE/.test(window.FIREBASE_CONFIG.apiKey)){
+      $("#signin").hidden=false;
+      $("#signinErr").textContent="Firebase isn't set up yet: paste your settings into firebase-config.js.";
+      $("#btnGoogle").disabled=true; return;
     }
-    DB=db;
-    COLS.forEach(col=>DB.collection(col).onSnapshot(snap=>onColSnap(col,snap),snapErr));
-    DB.doc("meta/app").onSnapshot(onMetaSnap,snapErr);
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    AUTH=firebase.auth(); FS=firebase.firestore();
+    FS.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    AUTH.getRedirectResult().catch(signinError);
+    AUTH.onAuthStateChanged(async u=>{
+      disconnect();
+      if(u && u.email && (u.emailVerified || u.providerData.some(p=>p.providerId==="google.com"))){
+        $("#signin").hidden=true; $("#app").hidden=false;
+        connect(u.email);
+      } else {
+        $("#app").hidden=true; $("#signin").hidden=false;
+        if(u && !u.emailVerified){
+          $("#signinErr").textContent="Check your inbox for "+u.email+" and open the verification link, then sign in again.";
+          await AUTH.signOut();
+        }
+      }
+    });
+    $("#btnGoogle").addEventListener("click",()=>{
+      $("#signinErr").textContent="";
+      const provider=new firebase.auth.GoogleAuthProvider();
+      AUTH.signInWithPopup(provider).catch(e=>{
+        if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/web-storage-unsupported"].includes(e.code)) AUTH.signInWithRedirect(provider);
+        else signinError(e);
+      });
+    });
+    $("#formLogin").addEventListener("submit",e=>{
+      e.preventDefault(); $("#signinErr").textContent="";
+      AUTH.signInWithEmailAndPassword($("#loginEmail").value.trim(),$("#loginPass").value).catch(signinError);
+    });
+    $("#btnCreate").addEventListener("click",async()=>{
+      $("#signinErr").textContent="";
+      const f=$("#formLogin"); if(!f.reportValidity()) return;
+      try{
+        const cred=await AUTH.createUserWithEmailAndPassword($("#loginEmail").value.trim(),$("#loginPass").value);
+        await cred.user.sendEmailVerification();
+      }catch(e){ signinError(e); }
+    });
+    $("#btnSignOut").addEventListener("click",async()=>{ if(await ask("Sign out on this device?","Sign out")) AUTH.signOut(); });
   }
 
   // ---------- in-page dialogs (the viewer blocks alert/confirm) ----------
@@ -704,9 +867,11 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     const active=customers.filter(c=>["active","soon"].includes(status(c))).length;
     const soon=customers.filter(c=>status(c)==="soon").length;
     const expired=customers.filter(c=>status(c)==="expired").length;
-    const owed=customers.filter(c=>unpaid(c)&&!c.stopped).length;
-    $("#summary").innerHTML="<b>"+active+"</b> active, <b>"+soon+"</b> ending within 3 days, <b>"+expired+"</b> expired, <b>"+owed+"</b> payment pending";
-    renderDue(); renderServices(); renderCustomers(); renderAccounts(); renderTx(); renderMonthly();
+    const debtors=customers.filter(c=>unpaid(c)&&!c.stopped);
+    const owedTotal=debtors.reduce((s,c)=>s+(owedOf(c)||0),0);
+    $("#summary").innerHTML="<b>"+active+"</b> active, <b>"+soon+"</b> ending within 3 days, <b>"+expired+"</b> expired, <b>"+debtors.length+"</b> payment pending"+(owedTotal?" (<b>"+usd(owedTotal)+"</b> owed)":"");
+    const badge=$("#debtBadge"); badge.hidden=!debtors.length; badge.textContent=debtors.length;
+    renderDue(); renderServices(); renderCustomers(); renderAccounts(); renderDebts(); renderTx(); renderMonthly();
   }
 
   function countHtml(d){
@@ -777,6 +942,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
             '<a class="btn small" href="'+calLink("Renew "+(c.name||"")+" ("+(c.service||"")+")",c.expiry)+'" target="_blank" rel="noopener" title="Add a phone calendar alert 3 days before the end date">Calendar alert</a>'+
             '<button class="btn small" data-renew="'+c.id+'" type="button">Renew</button>'+
             ((hasPhone(c)&&accOf(c))?'<a class="btn small wa" href="'+loginLink(c)+'" target="_blank" rel="noopener" title="Send login details">Send login</a>':'')+
+            ((unpaid(c)&&!c.stopped)?'<button class="btn small primary" data-pay="'+c.id+'" type="button">Got paid</button>':'')+
             '<button class="btn small ghost" data-history="'+c.id+'" type="button">History</button>'+
             '<button class="btn small ghost" data-edit="'+c.id+'" type="button">Edit</button>'+
             '<button class="btn small ghost danger" data-del="'+c.id+'" type="button">Delete</button>'+
@@ -785,6 +951,29 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
 
   const COPY_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>';
   function copyBtn(v,what){ return '<button class="copy" type="button" data-copy="'+esc(v)+'" title="Copy" aria-label="Copy '+what+'">'+COPY_ICON+'</button>'; }
+  function renderDebts(){
+    const list=customers.filter(c=>unpaid(c)&&!c.stopped).sort((a,b)=>(owedOf(b)||0)-(owedOf(a)||0)||(a.name||"").localeCompare(b.name||""));
+    const total=list.reduce((s,c)=>s+(owedOf(c)||0),0), noPrice=list.filter(c=>owedOf(c)===null).length;
+    $("#debtTotals").innerHTML='<div class="neg">Owed to you<b>'+usd(total)+'</b></div><div>Customers who owe<b>'+list.length+'</b></div>'+
+      (noPrice?'<div>Amount not set<b>'+noPrice+'</b></div>':'');
+    if(!list.length){ $("#debtList").innerHTML='<div class="empty" style="padding:20px">Nobody owes you right now. When you save a customer or a renewal as Pending or Partial, they show up here until they pay.</div>'; return; }
+    $("#debtList").innerHTML='<div class="row head debt-row"><div>Customer</div><div>Service</div><div>Owes</div><div>Since</div><div></div></div>'+
+      list.map(c=>{
+        const o=owedOf(c);
+        return '<div class="row debt-row">'+
+          '<div><b>'+esc(c.name)+'</b><div class="muted">'+(c.phone?esc(c.phone):'No number yet')+'</div></div>'+
+          '<div>'+esc(c.service)+'<div class="muted">Ends '+fmt(c.expiry)+'</div></div>'+
+          '<div>'+(o===null?'<span class="owed unknown">Amount not set</span>':'<span class="owed">'+usd(o)+'</span>')+
+            '<div class="muted">'+(c.payStatus==="Partial"?'Paid '+esc(money(c.amountPaid)||"$0")+' of '+esc(money(c.price)):'Nothing paid yet')+'</div></div>'+
+          '<div>'+fmt(c.lastRenewed||c.start)+'</div>'+
+          '<div class="actions cell-actions">'+
+            (hasPhone(c)?'<a class="btn small wa" href="'+payLink(c)+'" target="_blank" rel="noopener">Payment reminder</a>':'')+
+            '<button class="btn small primary" data-pay="'+c.id+'" type="button">Got paid</button>'+
+            '<button class="btn small ghost" data-edit="'+c.id+'" type="button">Edit</button>'+
+          '</div></div>';
+      }).join("");
+  }
+
   function renderAccounts(){
     if(!accounts.length){ $("#accList").innerHTML='<div class="empty" style="padding:20px">No stock accounts yet. Add one to track its slots and when you need to pay the platform.</div>'; return; }
     const rows=[...accounts].sort((a,b)=>(a.service||"").localeCompare(b.service||"")||(a.expiry||"9").localeCompare(b.expiry||"9"));
@@ -797,12 +986,13 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
         return '<div class="row acc-row">'+
           '<div style="min-width:0"><div class="copyline"><span><b>'+esc(a.login)+'</b></span>'+copyBtn(a.login,"email")+'</div><div class="muted">'+esc(extra)+'</div></div>'+
           '<div style="min-width:0">'+(a.password?'<div class="copyline"><span>'+esc(a.password)+'</span>'+copyBtn(a.password,"password")+'</div>':'<span class="muted">No password</span>')+
-            '<div class="muted">'+(a.tempLink?"Code link saved":"No code link")+'</div></div>'+
+            '<div class="muted">'+(a.passChanged?"Changed "+fmt(a.passChanged)+". ":"")+(a.tempLink?"Code link saved":"No code link")+'</div></div>'+
           '<div class="slots'+(used>=total?' is-full':'')+'">'+used+' / '+total+'<div class="muted">'+(total-used>0?(total-used)+" free":"Full")+'</div></div>'+
           '<div>'+fmt(a.expiry)+'<div class="muted">'+(!a.expiry?"Date not set":d<0?Math.abs(d)+(d===-1?" day ago":" days ago"):d===0?"today":"in "+d+(d===1?" day":" days"))+'</div></div>'+
           '<div class="actions cell-actions">'+
             (a.expiry?'<a class="btn small" href="'+calLink("Pay "+(a.service||"")+" account ("+(a.login||"")+")",a.expiry)+'" target="_blank" rel="noopener">Calendar alert</a>':'')+
             '<button class="btn small" data-accrenew="'+a.id+'" type="button">Renew</button>'+
+            '<button class="btn small" data-accpass="'+a.id+'" type="button">New password</button>'+
             '<button class="btn small ghost" data-accedit="'+a.id+'" type="button">Edit</button>'+
             '<button class="btn small ghost danger" data-accdel="'+a.id+'" type="button">Delete</button>'+
           '</div>'+
@@ -1007,7 +1197,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   });
   $("#dlgImport").addEventListener("close",()=>{
     if($("#dlgImport").returnValue!=="import"||!importPlan) { importPlan=null; return; }
-    importPlan.newAcc.forEach(a=>accounts.push(Object.assign({id:a.id},a.data,{slots:a.data.slots||(/shahid/i.test(a.data.service)?4:5)})));
+    importPlan.newAcc.forEach(a=>accounts.push(Object.assign({id:a.id},a.data,{slots:a.data.slots||(/shahid/i.test(a.data.service)?4:/prime/i.test(a.data.service)?6:5)})));
     importPlan.updAcc.forEach(u=>{ const i=accounts.findIndex(a=>a.id===u.id); if(i>=0){ const filled={}; Object.keys(u.data).forEach(k=>{ if(u.data[k]!==""&&u.data[k]!=null) filled[k]=u.data[k]; }); accounts[i]=Object.assign({},accounts[i],filled); } });
     importPlan.newCust.forEach(c=>{
       customers.push(Object.assign({id:c.id},c.data));
@@ -1113,8 +1303,11 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   }
   fa.service.addEventListener("change",()=>{
     const v=fa.service.value.trim().toLowerCase();
-    if(v.startsWith("shahid") && fa.slots.value==="5") fa.slots.value="4";
-    else if(v.startsWith("netflix") && fa.slots.value==="4") fa.slots.value="5";
+    const s=fa.slots.value;
+    if(!["4","5","6"].includes(s)) return;
+    if(v.startsWith("shahid")) fa.slots.value="4";
+    else if(v.startsWith("netflix")) fa.slots.value="5";
+    else if(v.startsWith("prime")||v.startsWith("amazon")) fa.slots.value="6";
   });
   $("#dlgAcc").addEventListener("close",async()=>{
     if($("#dlgAcc").returnValue!=="save") return;
@@ -1126,6 +1319,45 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     await put("accounts",editingAcc||newId("a_"),data);
   });
 
+  // ---------- new password: save it, then send each customer the new login ----------
+  let passAcc=null;
+  function openPass(a){
+    if(!a) return;
+    passAcc=a.id;
+    $("#passTitle").textContent="New password for "+(a.login||a.service||"account");
+    $("#newPass").value=""; $("#passErr").hidden=true;
+    $("#passStep1").hidden=false; $("#passStep2").hidden=true;
+    $("#passSave").hidden=false; $("#passClose").textContent="Cancel";
+    $("#dlgPass").showModal();
+    $("#newPass").focus();
+  }
+  $("#btnSuggestPass").addEventListener("click",()=>{
+    const words=["Cedar","Byblos","Harissa","Faraya","Batroun","Zahle","Anfeh","Jbeil"];
+    const p=words[Math.floor(Math.random()*words.length)]+String(100+Math.floor(Math.random()*900))+"tv";
+    $("#newPass").value=p;
+  });
+  $("#passSave").addEventListener("click",async()=>{
+    const a=accounts.find(x=>x.id===passAcc); if(!a) return;
+    const v=$("#newPass").value.trim();
+    if(v.length<6){ $("#passErr").hidden=false; return; }
+    await put("accounts",a.id,Object.assign(strip(a),{password:v,passChanged:todayStr()}));
+    const members=customers.filter(c=>c.accountId===a.id).sort((x,y)=>(x.name||"").localeCompare(y.name||""));
+    const active=members.filter(c=>["active","soon"].includes(status(c)));
+    const skipped=members.length-active.length;
+    $("#passDone").textContent="Password saved. Send each customer below their new login"+(skipped?" ("+skipped+" expired or not renewing, so they're left out)":"")+".";
+    $("#passList").innerHTML=active.length?active.map(c=>
+      '<div class="pw-item"><div><b>'+esc(c.name)+'</b><div class="muted">'+esc([c.profile,c.pin?"PIN "+c.pin:"",c.phone||"No number yet"].filter(Boolean).join(" · "))+'</div></div>'+
+      (hasPhone(c)?'<a class="btn small wa" href="'+loginLink(c)+'" target="_blank" rel="noopener" data-pwsent>Send new login</a>':'<button class="btn small ghost" type="button" data-edit="'+c.id+'">Add number</button>')+
+      '</div>').join(""):'<div class="empty" style="padding:12px">No active customers on this account, so there is nobody to message.</div>';
+    $("#passStep1").hidden=true; $("#passStep2").hidden=false;
+    $("#passSave").hidden=true; $("#passClose").textContent="Done";
+  });
+  $("#passList").addEventListener("click",e=>{
+    const b=e.target.closest("[data-pwsent]"); if(!b) return;
+    b.textContent="Sent"; b.closest(".pw-item").classList.add("sent");
+  });
+  $("#passList").addEventListener("click",e=>{ if(e.target.closest("[data-edit]")) $("#dlgPass").close(); });
+
   // ---------- renew ----------
   const fr=$("#formRenew");
   function renewBase(c){ return daysLeft(c.expiry)<0?todayStr():c.expiry; }
@@ -1136,11 +1368,13 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     fr.months.value=String(c.months||1);
     fr.expiry.value=addMonths(renewBase(c),Number(fr.months.value));
     fr.payStatus.value="Paid";
+    fr.price.value=c.price===""||c.price==null?"":c.price;
     fr.amountPaid.value=c.price===""||c.price==null?"":c.price;
     fr.datePaid.value=todayStr();
     fr.payMethod.value=c.payMethod||"Whish";
     $("#dlgRenew").showModal();
   }
+  fr.payStatus.addEventListener("change",()=>{ if(fr.payStatus.value==="Pending") fr.amountPaid.value=""; else if(fr.payStatus.value==="Paid"&&!fr.amountPaid.value) fr.amountPaid.value=fr.price.value; });
   fr.months.addEventListener("change",()=>{ const c=customers.find(x=>x.id===renewing); if(c) fr.expiry.value=addMonths(renewBase(c),Number(fr.months.value)); });
   $("#dlgRenew").addEventListener("close",()=>{
     if($("#dlgRenew").returnValue!=="save") return;
@@ -1148,7 +1382,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     logTx({date:fr.datePaid.value||todayStr(),kind:"Renewal",customerId:c.id,customerName:c.name,service:c.service,
       months:Number(fr.months.value),amount:num(fr.amountPaid.value),payStatus:fr.payStatus.value,method:fr.payMethod.value,expiry:fr.expiry.value});
     put("customers",c.id,Object.assign(strip(c),{
-      months:Number(fr.months.value), expiry:fr.expiry.value, stopped:false, remindedFor:"", lastRenewed:todayStr(),
+      months:Number(fr.months.value), expiry:fr.expiry.value, stopped:false, price:fr.price.value===""?c.price:Number(fr.price.value), remindedFor:"", lastRenewed:todayStr(),
       payStatus:fr.payStatus.value, amountPaid:fr.amountPaid.value===""?"":Number(fr.amountPaid.value),
       datePaid:fr.datePaid.value, payMethod:fr.payMethod.value
     }));
@@ -1195,11 +1429,41 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
     put("accounts",a.id,Object.assign(strip(a),{expiry:fp.expiry.value,cost,months}));
   });
 
+  // ---------- got paid ----------
+  const fpay=$("#formPay"); let payingCust=null;
+  function payInfo(){
+    const c=customers.find(x=>x.id===payingCust); if(!c) return;
+    const o=owedOf(c), amt=num(fpay.amount.value), bal=currentBalance();
+    let t=o===null?'No price is set for this customer, so the amount you enter is recorded as fully paid.':
+      (amt>=o?'This clears the debt.':'Still owed after this: <b>'+usd(o-amt)+'</b>');
+    if(bal!==null) t+='<br>Balance after: <b>'+usd(bal+amt)+'</b>';
+    $("#payInfo").innerHTML=t;
+  }
+  function openPay(c){
+    if(!c) return;
+    payingCust=c.id; fpay.reset();
+    const o=owedOf(c);
+    $("#payTitle").textContent=c.name+(o?" owes "+usd(o):" got paid");
+    fpay.amount.value=o||""; fpay.date.value=todayStr(); fpay.method.value=c.payMethod||"Whish";
+    payInfo(); $("#dlgPay").showModal();
+  }
+  fpay.amount.addEventListener("input",payInfo);
+  $("#dlgPay").addEventListener("close",()=>{
+    if($("#dlgPay").returnValue!=="save") return;
+    const c=customers.find(x=>x.id===payingCust); if(!c) return;
+    const amt=Math.abs(num(fpay.amount.value)); if(!amt) return;
+    const paid=Math.round((num(c.amountPaid)+amt)*100)/100;
+    const full=c.price===""||c.price==null||paid>=num(c.price);
+    const st=full?"Paid":"Partial";
+    logTx({date:fpay.date.value||todayStr(),kind:"Payment",customerId:c.id,customerName:c.name,service:c.service,amount:amt,payStatus:st,method:fpay.method.value,expiry:c.expiry});
+    put("customers",c.id,Object.assign(strip(c),{amountPaid:paid,payStatus:st,datePaid:fpay.date.value||todayStr(),payMethod:fpay.method.value}));
+  });
+
   // ---------- settings ----------
-  $("#btnSettings").addEventListener("click",()=>{ $("#formSet").template.value=settings.template||DEFAULT_TEMPLATE; $("#formSet").codeTemplate.value=settings.codeTemplate||DEFAULT_CODE; $("#formSet").loginTemplate.value=settings.loginTemplate||DEFAULT_LOGIN; $("#dlgSet").showModal(); });
+  $("#btnSettings").addEventListener("click",()=>{ $("#formSet").template.value=settings.template||DEFAULT_TEMPLATE; $("#formSet").codeTemplate.value=settings.codeTemplate||DEFAULT_CODE; $("#formSet").loginTemplate.value=settings.loginTemplate||DEFAULT_LOGIN; $("#formSet").payTemplate.value=settings.payTemplate||DEFAULT_PAY; $("#dlgSet").showModal(); });
   $("#dlgSet").addEventListener("close",async()=>{
     if($("#dlgSet").returnValue!=="save") return;
-    settings={template:$("#formSet").template.value.trim()||DEFAULT_TEMPLATE, codeTemplate:$("#formSet").codeTemplate.value.trim()||DEFAULT_CODE, loginTemplate:$("#formSet").loginTemplate.value.trim()||DEFAULT_LOGIN};
+    settings={template:$("#formSet").template.value.trim()||DEFAULT_TEMPLATE, codeTemplate:$("#formSet").codeTemplate.value.trim()||DEFAULT_CODE, loginTemplate:$("#formSet").loginTemplate.value.trim()||DEFAULT_LOGIN, payTemplate:$("#formSet").payTemplate.value.trim()||DEFAULT_PAY};
     persist(); render();
   });
 
@@ -1212,7 +1476,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
       catch(err){ const ta=document.createElement("textarea"); ta.value=cp.dataset.copy; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); done(); }catch(x){} ta.remove(); }
       return;
     }
-    const t=e.target.closest("[data-remind],[data-renew],[data-stop],[data-edit],[data-del],[data-accrenew],[data-accedit],[data-accdel],[data-history],[data-txdel],[data-range],.tab");
+    const t=e.target.closest("[data-pay],[data-remind],[data-renew],[data-stop],[data-edit],[data-del],[data-accrenew],[data-accpass],[data-accedit],[data-accdel],[data-history],[data-txdel],[data-range],.tab");
     if(!t) return;
     if(t.classList.contains("tab")){
       document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b===t?"true":"false"));
@@ -1220,10 +1484,12 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
       $("#paneAccounts").hidden=t.dataset.tab!=="accounts";
       $("#paneTx").hidden=t.dataset.tab!=="tx";
       $("#paneMonthly").hidden=t.dataset.tab!=="monthly";
-      $("#pageTitle").textContent=t.textContent.trim();
+      $("#paneDebts").hidden=t.dataset.tab!=="debts";
+      $("#pageTitle").textContent=(t.querySelector("span")||t).textContent.trim();
       $("#board").hidden=!["customers","accounts"].includes(t.dataset.tab);
       return;
     }
+    if(t.dataset.pay){ openPay(customers.find(x=>x.id===t.dataset.pay)); return; }
     if(t.dataset.range){ setRange(t.dataset.range); return; }
     if(t.dataset.history){ openHistory(customers.find(x=>x.id===t.dataset.history)); return; }
     if(t.dataset.txdel){
@@ -1255,6 +1521,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
       return;
     }
     if(t.dataset.accrenew){ openAccPay(accounts.find(x=>x.id===t.dataset.accrenew)); return; }
+    if(t.dataset.accpass){ openPass(accounts.find(x=>x.id===t.dataset.accpass)); return; }
     if(t.dataset.accedit){ openAcc(accounts.find(x=>x.id===t.dataset.accedit)); return; }
     if(t.dataset.accdel){
       const a=accounts.find(x=>x.id===t.dataset.accdel);
@@ -1267,18 +1534,12 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   ["#q","#fService","#fStatus"].forEach(s=>$(s).addEventListener("input",renderCustomers));
 
   // ---------- export ----------
-  async function saveFile(name,text,type){
-    const c=window.claude;
-    const dl=c&&typeof c.use==="function"?await c.use("downloads").catch(()=>null):null;
-    if(!dl){ note("Downloading files isn't available here."); return; }
-    try{ await dl.save({filename:name,data:new Blob([text],{type})}); }
-    catch(err){
-      const code=err&&err.code;
-      if(code==="declined") return;
-      if(code==="rate_limited") note("A download is already waiting for you to confirm.");
-      else note("The file couldn't be saved here.");
-    }
+  function saveFile(name,text,type){
+    const url=URL.createObjectURL(new Blob([text],{type}));
+    const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1000);
   }
+
   $("#btnExport").addEventListener("click",()=>{
     const cols=["name","phone","service","profile","pin","start","months","expiry","price","payStatus","amountPaid","datePaid","payMethod","notes"];
     const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
@@ -1299,7 +1560,7 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
       catch(err){ note("That file isn't a tracker backup."); return; }
       if(!await ask("Replace everything in the tracker with this backup ("+d.customers.length+" customers)? This changes it on all your devices.","Replace")) return;
       customers=d.customers; accounts=d.accounts||[]; transactions=d.transactions||[]; settings=Object.assign({},DEFAULTS,d.settings||{}); balance=d.balance||null;
-      migrate(); persist(); render();
+      showBanner(""); migrate(); persist(); render();
     };
     r.readAsText(f);
   });
@@ -1324,11 +1585,11 @@ label input,label select,label textarea{background:var(--bg);border:1px solid va
   themeLabel();
 
   // ---------- boot ----------
-  load();
   render();
   setSync();
-  connect();
+  startAuth();
+  if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>
-
-</body></html>
+</body>
+</html>
